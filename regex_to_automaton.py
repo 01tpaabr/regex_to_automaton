@@ -34,10 +34,10 @@ class state():
         return string 
 
     def __str__(self) -> str:
-        return "State " + self.name
+        return "State " + self.name + ", is_final=" + str(self.final)
     
     def __repr__(self) -> str:
-        return "State " + self.name
+        return "State " + self.name + ", is_final=" + str(self.final)
     
 
 class transition():
@@ -63,7 +63,7 @@ class automaton():
     def __str__(self) -> str:
         string = ""
         for i in self.states:
-            currStateString = "State: " + i.name + "\n"
+            currStateString = "State: " + i.__str__() + "\n"
             for j in i.transitions:
                 currStateString += str(i.transitions[j]) + " \n"
             
@@ -86,41 +86,40 @@ def transform(regex : str) -> automaton:
     a.statesDict[initState.name] = initState
     
     lastState = initState
+
+    #Starting states for groups, defined by '('
+    groupStateStack = []
+    
+    #Notifies number of '(' operations to be handled (i.e add state to 'groupStateStack' line 136) 
+    openGroup = 0
     
     i = 0
     while i < len(regex):
         realSymbol = regex[i]
         symbol = convertSymbol(regex, i)
-
-        openGroup = False
         
         if realSymbol == "(":
-            openGroup = True
+            openGroup += 1
 
-            #Get starting group symbol
-            if i < len(regex) - 1:
-                i += 1
-                realSymbol = regex[i]
-                symbol = convertSymbol(regex, i)
 
         #Handle Group Closure
         if realSymbol == ")":
+            startGroupState = groupStateStack.pop()
             #Not last
             if i < len(regex) - 1:
                 if regex[i + 1] == "*":
                     startGroupState.final = True
 
-                #Add transition to go back to starting group state
-                backTransition = transition(startGroupState, "any")
-                lastState.transitions["any"] = backTransition
-                
-                #Reset groupState variable
-                startGroupState = None
+                    #Add transition to go back to starting group state
+                    backTransition = transition(startGroupState, "empty")
+                    lastState.transitions["empty"] = backTransition
+
+                #"empty" symbol needs to be interpreted in run as using this transition only if there is no other, then it doesn't read any symbol
                 
                 #Exists other symbols
                 if i < len(regex) - 2:
-                    # ) ocorrence + repetitor ocorrence = +2 for next symbol
-                    i += 2
+                    # +1 for '*', that we have already handled
+                    i += 1
 
         if realSymbol not in operators:
             newState = state(False, {})
@@ -129,10 +128,11 @@ def transform(regex : str) -> automaton:
             lastState.transitions[symbol] = newTransition
 
             #Handle '('
-            if openGroup:
-                startGroupState = newState
-                openGroup = False
+            while openGroup:
+                groupStateStack.append(lastState)
+                openGroup += -1
 
+            #Add to automaton list of states
             a.states.append(newState)
             a.statesDict[newState.name] = newState
 
@@ -142,7 +142,7 @@ def transform(regex : str) -> automaton:
 
     return a
 
-test = "a(abc)*"
+test = "a(ad(ab)bc)*"
 
 res = transform(test)
 print(res)        
