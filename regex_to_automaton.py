@@ -1,12 +1,12 @@
 import random
 import string
 
-# ()
+# (
+# )
 # *
-# +
 # .
 # \symbol
-# ||
+# |
 
 
 class state():
@@ -87,7 +87,7 @@ def transform(regex : str) -> automaton:
     
     lastState = initState
 
-    #Starting states for groups, defined by '('
+    #Starting groups states, defined by '(' ocorrence
     groupStateStack = []
     
     #Notifies number of '(' operations to be handled (i.e add state to 'groupStateStack' line 136) 
@@ -122,7 +122,8 @@ def transform(regex : str) -> automaton:
                     i += 1
 
         if realSymbol not in operators:
-            newState = state(False, {})
+            #If there is no more characters left, this is an final state
+            newState = state(not (i + 1 < len(regex)), {})
             
             newTransition = transition(newState, symbol)
             lastState.transitions[symbol] = newTransition
@@ -142,7 +143,7 @@ def transform(regex : str) -> automaton:
 
     return a
 
-test = "a(ad(ab)bc)*"
+test = "a(ad(ab)bc)*5"
 
 res = transform(test)
 print(res)        
