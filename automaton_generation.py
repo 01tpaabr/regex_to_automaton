@@ -1,5 +1,9 @@
-import random
-import string
+import definitions
+
+automaton = definitions.automaton
+state = definitions.state
+transition = definitions.transition
+convertSymbol = definitions.convertSymbol
 
 # (
 # )
@@ -9,79 +13,46 @@ import string
 # |
 
 
-class state():
-    final : bool = False
-    transitions : dict = {}
-    
-    name_counter : int = 0
-    name : str = ""
 
-    def __init__(self, final, transitions) -> None:
-        self.final = final
-        self.transitions = transitions
-        self.name = "q" + str(state.name_counter)
-        state.name_counter += 1
-    
-    def has_transition(self, symbol) -> bool:
-        return symbol in self.transitions.keys()
-    
-    def show_transitions(self) -> str:
-        string = ""
+#Given automaton list, unify in one
+def unionProcess(automatons : list) -> automaton:
+    #these automatons have only one direction, with back transitions, and "states" in these automatons will be following these directions
+    #So we can handle the union process  in this way
+    union = automaton(None, [], {})
 
-        for i in self.transitions.keys():
-            string += str(self.transitions[i]) + "\n"
+    #For example if 3 paths(automatons) are given, in each iteration of the for loop "oldStates" will have a reference to 3 states, one from each path
+    
+    currentOldStates = [None for i in range(len(automatons))]
+    currentNewStates = [None for i in range(len(automatons))]
+
+    #newStates will have 3 positions, representing the union of the 3 states in "oldStates"
+    #An state can be replicated in more than one position in 'newStates', representing it refers to more than one old state, needing to handle the transitions accordingly
+
+    automatons = sorted(automatons, key = lambda a: len(a.states, reverse=True))
+    biggerPath =automatons[0]
+    pathsList = list(map(lambda a: a.states, automatons))
+
+    #Run till bigger path is processed
+    for i in range(len(biggerPath.states)):
+        currentOldStates = list(map(lambda l: l[i], pathsList))
+        isFinal = list(map(lambda s: s.final, currentOldStates))
+        oldTransitions = list(map(lambda s: s.transitions, currentOldStates))
+        oldTransitionsSymbols = list(map(lambda t: t.keys(), oldTransitions))
+
         
-        return string 
 
-    def __str__(self) -> str:
-        return "State " + self.name + ", is_final=" + str(self.final)
-    
-    def __repr__(self) -> str:
-        return "State " + self.name + ", is_final=" + str(self.final)
-    
-
-class transition():
-    target : state = None
-    symbol : str = ""
-
-    def __init__(self, target, symbol) -> None:
-        self.target = target
-        self.symbol = symbol
-
-    def __str__(self) -> str:
-        return "Transition (" + str(self.target.name) + " , "+ str(self.symbol) +  " )"
-    
-    def __repr__(self) -> str:
-        return "Transition (" + str(self.target.name) + " , "+ str(self.symbol) +  " )"
-
-class automaton():
-    states : list = []
-
-    #For other acesses
-    statesDict : dict = {}
-
-    def __str__(self) -> str:
-        string = ""
-        for i in self.states:
-            currStateString = "State: " + i.__str__() + "\n"
-            for j in i.transitions:
-                currStateString += str(i.transitions[j]) + " \n"
-            
-            string += currStateString + "\n"
         
-        return string
 
+    return union
 
-def convertSymbol(regex, symbolIndex):
-    convertedSymbol = regex[symbolIndex]
-    return convertedSymbol
-
-def transform(regex : str) -> automaton:
+#No | operator in this regex
+def path(regex : str) -> automaton:
     operators = ["(", ")", "*", "|"]
 
-    a = automaton()
+    a = automaton(None, [], {})
 
     initState = state(False, {})
+    a.initialState = initState
     a.states.append(initState)
     a.statesDict[initState.name] = initState
     
@@ -114,6 +85,9 @@ def transform(regex : str) -> automaton:
                     backTransition = transition(startGroupState, "empty")
                     lastState.transitions["empty"] = backTransition
 
+                    if i + 1 == len(regex) - 1:
+                        lastState.final = True
+
                 #"empty" symbol needs to be interpreted in run as using this transition only if there is no other, then it doesn't read any symbol
                 
                 #Exists other symbols
@@ -143,8 +117,17 @@ def transform(regex : str) -> automaton:
 
     return a
 
-test = "a(ad(ab)bc)*5"
+test = "a(ad(ab)bc)*"
+test2 = "ab((bc)*aa)*ad"
+test3 = "abd(acc)*(a)*"
 
-res = transform(test)
-print(res)        
+a1 = path(test)
+a2 = path(test2)
+a3 = path(test3)
+
+print(a1)
+print("########################################")
+print(a2)
+print("########################################")
+print(a3)  
         
