@@ -37,9 +37,13 @@ def unionProcess(automatons : list) -> automaton:
     #Hold current states being handled by iteration
     pathsList = list(map(lambda a: a.initialState, automatons))
     
+    
     initUnionState = state(False, {})
     union.states.append(initUnionState)
     union.initialState = initUnionState
+
+    for i in pathsList:
+        initUnionState.final = initUnionState.final or i.final
 
     createdStates = []
     createdTransitions = []
@@ -87,13 +91,13 @@ def unionProcess(automatons : list) -> automaton:
             for j in lastStates:
                 chosenSymbols[j.name] = []
 
-        print("#############################################")
-        print(lastStates)
-        print(currentSymbols)
-        print(oldTransitionsTargets)
-
         for j in range(len(currentSymbols)):
             for s in range(len(currentSymbols[j])):
+                originalStateNameForCurrentSymbol = currentSymbols[j][len(currentSymbols[j]) - 1]
+
+                for k in pathsList:
+                    if k.name == originalStateNameForCurrentSymbol: originalStateForCurrentSymbol = k
+
                 #Last place holds state that originated the transitions (not an symbol to be iterated)
                 if not s == len(currentSymbols[j]) - 1:
                     currentSymbol = currentSymbols[j][s]
@@ -116,6 +120,7 @@ def unionProcess(automatons : list) -> automaton:
 
                             #Target state of this symbol in old automaton
                             oldReferencedState = currentTransition.target
+                            newState.final = newState.final or oldReferencedState.final
 
                             currentTransitionsTargets[newState.name] = [oldReferencedState.name]
                         else: 
@@ -123,16 +128,17 @@ def unionProcess(automatons : list) -> automaton:
                             #In this case we just need to keep track the old target state of this transition
                             oldReferencedState = currentTransition.target
                             currentTransitionsTargets[newState.name].append(oldReferencedState.name)
-                    else:
-                        originalStateForCurrentSymbol = currentSymbols[j][len(currentSymbols[j]) - 1]
-                        transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateForCurrentSymbol)
-
-                        #Same protocol as first  (remove separation later)
+                            newState.final = newState.final or oldReferencedState.final
+                    else: #Rest of iterations
+                        
+                        transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateNameForCurrentSymbol)
+                        #Same protocol as first iteration (remove separation later)
                         if(currentSymbol not in chosenSymbols[transitionParentState.name]):
                             chosenSymbols[transitionParentState.name].append(currentSymbol)
 
                             newState = state(False, {})
                             newTransition = transition(newState, currentSymbol)
+                            
 
                             createdStates.append(newState)
                             createdTransitions.append(newTransition)
@@ -140,11 +146,13 @@ def unionProcess(automatons : list) -> automaton:
                             transitionParentState.transitions[currentSymbol] = newTransition
 
                             oldReferencedState = currentTransition.target
+                            newState.final = newState.final or oldReferencedState.final
 
                             currentTransitionsTargets[newState.name] = [oldReferencedState.name]
                         else:
                             oldReferencedState = currentTransition.target
                             currentTransitionsTargets[newState.name].append(oldReferencedState.name)
+                            newState.final = newState.final or oldReferencedState.final
 
 
         #Go to next level
@@ -242,10 +250,7 @@ a2 = path(test2)
 a3 = path(test3)
 
 b = unionProcess([a1, a2, a3])
-
 print(b)
-
-
 b.treePrintAutomaton()
 
 
