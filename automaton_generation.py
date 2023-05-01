@@ -13,43 +13,153 @@ convertSymbol = definitions.convertSymbol
 # |
 
 
+#Aux function to find out which last state this transition needs to be handled in
+def findLastState(lastStatesList, oldReferenceStateDict, originalState):
+    lastStateName = ""
+
+    for i in oldReferenceStateDict:
+        if originalState in oldReferenceStateDict[i]: lastStateName = i
+    
+    for i in lastStatesList:
+        if i.name == lastStateName: return i
+
+
 
 #Given automaton list, unify in one
 def unionProcess(automatons : list) -> automaton:
-    #these automatons have only one direction, with back transitions, and "states" in these automatons will be following these directions
-    #So we can handle the union process  in this way
-    union = automaton(None, [], {})
+    #Variable representing how much of the 
+    union = automaton(None, [], {}, [])
 
-    #For example if 3 paths(automatons) are given, in each iteration of the for loop "oldStates" will have a reference to 3 states, one from each path
+    automatons = sorted(automatons, key = lambda a: a.depth(), reverse=True)
+
+    biggerPath = automatons[0]
+
+    #Hold current states being handled by iteration
+    pathsList = list(map(lambda a: a.initialState, automatons))
     
-    currentOldStates = [None for i in range(len(automatons))]
-    currentNewStates = [None for i in range(len(automatons))]
+    initUnionState = state(False, {})
+    union.states.append(initUnionState)
+    union.initialState = initUnionState
 
-    #newStates will have 3 positions, representing the union of the 3 states in "oldStates"
-    #An state can be replicated in more than one position in 'newStates', representing it refers to more than one old state, needing to handle the transitions accordingly
+    createdStates = []
+    createdTransitions = []
+    currentTransitionsTargets = {}
 
-    automatons = sorted(automatons, key = lambda a: len(a.states, reverse=True))
-    biggerPath =automatons[0]
-    pathsList = list(map(lambda a: a.states, automatons))
+    lastStates = []
+    lastTransitions = []
 
     #Run till bigger path is processed
-    for i in range(len(biggerPath.states)):
-        currentOldStates = list(map(lambda l: l[i], pathsList))
-        isFinal = list(map(lambda s: s.final, currentOldStates))
-        oldTransitions = list(map(lambda s: s.transitions, currentOldStates))
-        oldTransitionsSymbols = list(map(lambda t: t.keys(), oldTransitions))
+    for i in range(biggerPath.depth()):
+        #Refresh data structures to new iteration
+        lastStates = createdStates
+        lastTransitions = createdTransitions
 
+        createdStates = []
+        createdTransitions
+
+        currentSymbols = []
+        currentTransitions = []
+
+        #Keep track which states a symbol lead's to in old automaton's, can be more than one
+        oldTransitionsTargets = currentTransitionsTargets
+        currentTransitionsTargets = {}
+
+        for p in pathsList: 
+            aux = p.nextSymbols()
+            aux.append(p.name)
+
+            auxTransitions = []
+            for t in p.transitions:
+                auxTransitions.append(p.transitions[t])
+
+            currentSymbols.append(aux)
+            currentTransitions.append(auxTransitions)
+
+        chosenSymbols = {}
+
+        #Bad way of separating first and other iterations, improve later
+        if i == 0:
+            chosenSymbols["init"] = []
+        else:
+            for j in lastStates:
+                chosenSymbols[j.name] = []
+
+        print("#############################################")
+        print(currentSymbols)
+        print(oldTransitionsTargets)
+
+        for j in range(len(currentSymbols)):
+            for s in range(len(currentSymbols[j])):
+                #Last place holds state that originated the transitions (not an symbol to be iterated)
+                if not s == len(currentSymbols[j]) - 1:
+                    currentSymbol = currentSymbols[j][s]
+                    currentTransition = currentTransitions[j][s]
+                    if currentSymbol == "empty":
+                        continue
+                    
+                    #First iteration
+                    if i == 0:
+                        if(currentSymbol not in chosenSymbols["init"]):
+                            chosenSymbols["init"].append(currentSymbol)
+
+                            newState = state(False, {})
+                            newTransition = transition(newState, currentSymbol)
+
+                            createdStates.append(newState)
+                            createdTransitions.append(newTransition)
+                            
+                            initUnionState.transitions[currentSymbol] = newTransition
+
+                            #Target state of this symbol in old automaton
+                            oldReferencedState = currentTransition.target
+
+                            currentTransitionsTargets[newState.name] = [oldReferencedState.name]
+                        else: 
+                            #If symbol has already been chosen, it already has an state for it in the new automaton
+                            #In this case we just need to keep track the old target state of this transition
+                            oldReferencedState = currentTransition.target
+                            currentTransitionsTargets[newState.name].append(oldReferencedState.name)
+                    else:
+                        originalStateForCurrentSymbol = currentSymbols[j][len(currentSymbols[j]) - 1]
+                        transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateForCurrentSymbol)
+
+                        #Same protocol as first  (remove separation later)
+                        if(currentSymbol not in chosenSymbols[transitionParentState.name]):
+                            chosenSymbols[transitionParentState.name].append(currentSymbol)
+
+                            newState = state(False, {})
+                            newTransition = transition(newState, currentSymbol)
+
+                            createdStates.append(newState)
+                            createdTransitions.append(newTransition)
+
+                            transitionParentState.transitions[currentSymbol] = newTransition
+
+                            oldReferencedState = currentTransition.target
+
+                            currentTransitionsTargets[newState.name] = [oldReferencedState.name]
+                        else:
+                            oldReferencedState = currentTransition.target
+                            currentTransitionsTargets[newState.name].append(oldReferencedState.name)
+
+
+        #Go to next level
+        pathsList = list(map(lambda s: s.goLower(), pathsList))
+        pathsList = [val for sublist in pathsList for val in sublist] #Remove nesting
+
+        for s in createdStates:
+            union.states.append(s)
         
-
-        
-
+        for t in createdTransitions:
+            union.transitionsList.append(t)
+         
     return union
 
 #No | operator in this regex
 def path(regex : str) -> automaton:
     operators = ["(", ")", "*", "|"]
 
-    a = automaton(None, [], {})
+    a = automaton(None, [], {}, [])
 
     initState = state(False, {})
     a.initialState = initState
@@ -83,6 +193,7 @@ def path(regex : str) -> automaton:
 
                     #Add transition to go back to starting group state
                     backTransition = transition(startGroupState, "empty")
+                    a.transitionsList.append(backTransition)
                     lastState.transitions["empty"] = backTransition
 
                     if i + 1 == len(regex) - 1:
@@ -100,6 +211,7 @@ def path(regex : str) -> automaton:
             newState = state(not (i + 1 < len(regex)), {})
             
             newTransition = transition(newState, symbol)
+            a.transitionsList.append(newTransition)
             lastState.transitions[symbol] = newTransition
 
             #Handle '('
@@ -118,16 +230,22 @@ def path(regex : str) -> automaton:
     return a
 
 test = "a(ad(ab)bc)*"
-test2 = "ab((bc)*aa)*ad"
+test2 = "bb((bc)*aa)*ad"
 test3 = "abd(acc)*(a)*"
 
 a1 = path(test)
 a2 = path(test2)
 a3 = path(test3)
 
-print(a1)
-print("########################################")
-print(a2)
-print("########################################")
-print(a3)  
+b = unionProcess([a1, a2, a3])
+
+print(b)
+
+
+# print(a1)
+# print("########################################")
+# print(a2)
+# print("########################################")
+# print(a3)  
         
+

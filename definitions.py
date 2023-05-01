@@ -14,6 +14,24 @@ class state():
     def has_transition(self, symbol) -> bool:
         return symbol in self.transitions.keys()
     
+    #Go one level deeper in path depth
+    def goLower(self):
+        nextStates = []
+
+        for i in self.transitions:
+            #Bad way of verifying if its not a back transition, only works if automaton construction only assigns empty to these transitions
+            if i != "empty": nextStates.append(self.transitions[i].target)
+        
+        return nextStates
+    
+    def nextSymbols(self):
+        symbols = []
+
+        for t in self.transitions:
+            symbols.append(t)
+        
+        return symbols
+    
     def show_transitions(self) -> str:
         string = ""
 
@@ -46,14 +64,16 @@ class transition():
 class automaton():
     initialState : state = None
     states : list = []
+    transitionsList : list = []
 
     #For other acesses
     statesDict : dict = {}
 
-    def __init__(self, initialState, states, statesDict) -> None:
+    def __init__(self, initialState, states, statesDict, transitionsList) -> None:
         self.initialState = initialState
         self.states = states
         self.statesDict = statesDict
+        self.transitionsList = transitionsList
 
     def __str__(self) -> str:
         string = "Start state: " + str(self.initialState.name) + "\n"
@@ -65,6 +85,39 @@ class automaton():
             string += currStateString + "\n"
         
         return string
+    
+    def incomingTransitions(self, stateName):
+        transitions = []
+
+        for i in self.transitionsList:
+            if i.target.name == stateName:
+                transitions.append(i)
+
+
+        return transitions
+    
+
+    def depth(self):
+        return self.depthAux(self.initialState, [])
+    
+    def depthAux(self, currentState, calledStates):
+        depth = 1
+
+        nextDepths = []
+        calledStates.append(currentState)
+
+        for i in currentState.transitions:
+            nextState = currentState.transitions[i].target
+
+            if nextState not in calledStates:
+                nextDepths.append(self.depthAux(nextState, calledStates))
+            
+            nextDepths.sort()
+
+        if len(nextDepths) > 0: depth += nextDepths[0]
+
+        return depth
+
 
 def convertSymbol(regex, symbolIndex):
     convertedSymbol = regex[symbolIndex]
