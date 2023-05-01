@@ -52,6 +52,9 @@ def unionProcess(automatons : list) -> automaton:
     lastStates = []
     lastTransitions = []
 
+    #Keep track of all references from createad states to old states
+    allReferences = {}
+
     #Run till bigger path is processed
     for i in range(biggerPath.depth()):
         #Refresh data structures to new iteration
@@ -67,9 +70,6 @@ def unionProcess(automatons : list) -> automaton:
         #Keep track which states a symbol lead's to in old automaton's, can be more than one
         oldTransitionsTargets = currentTransitionsTargets
         currentTransitionsTargets = {}
-
-        #Keep track of created states, that need an "empty" transition attached to it in the future
-
 
         for p in pathsList: 
             aux = p.nextSymbols()
@@ -102,57 +102,66 @@ def unionProcess(automatons : list) -> automaton:
                 if not s == len(currentSymbols[j]) - 1:
                     currentSymbol = currentSymbols[j][s]
                     currentTransition = currentTransitions[j][s]
-                    if currentSymbol == "empty":
-                        continue
                     
                     #First iteration
                     if i == 0:
-                        if(currentSymbol not in chosenSymbols["init"]):
-                            chosenSymbols["init"].append(currentSymbol)
-
-                            newState = state(False, {})
-                            newTransition = transition(newState, currentSymbol)
-
-                            createdStates.append(newState)
-                            createdTransitions.append(newTransition)
-                            
-                            initUnionState.transitions[currentSymbol] = newTransition
-
-                            #Target state of this symbol in old automaton
-                            oldReferencedState = currentTransition.target
-                            newState.final = newState.final or oldReferencedState.final
-
-                            currentTransitionsTargets[newState.name] = [oldReferencedState.name]
-                        else: 
-                            #If symbol has already been chosen, it already has an state for it in the new automaton
-                            #In this case we just need to keep track the old target state of this transition
-                            oldReferencedState = currentTransition.target
-                            currentTransitionsTargets[newState.name].append(oldReferencedState.name)
-                            newState.final = newState.final or oldReferencedState.final
-                    else: #Rest of iterations
-                        
-                        transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateNameForCurrentSymbol)
-                        #Same protocol as first iteration (remove separation later)
-                        if(currentSymbol not in chosenSymbols[transitionParentState.name]):
-                            chosenSymbols[transitionParentState.name].append(currentSymbol)
-
-                            newState = state(False, {})
-                            newTransition = transition(newState, currentSymbol)
-                            
-
-                            createdStates.append(newState)
-                            createdTransitions.append(newTransition)
-
-                            transitionParentState.transitions[currentSymbol] = newTransition
-
-                            oldReferencedState = currentTransition.target
-                            newState.final = newState.final or oldReferencedState.final
-
-                            currentTransitionsTargets[newState.name] = [oldReferencedState.name]
+                        if currentSymbol == "empty":
+                            emptyTransitionTarget = allReferences[currentTransition.target.name]
+                            newTransition = transition(emptyTransitionTarget, "empty")
+                            initUnionState.transitions["empty"] = newTransition
                         else:
-                            oldReferencedState = currentTransition.target
-                            currentTransitionsTargets[newState.name].append(oldReferencedState.name)
-                            newState.final = newState.final or oldReferencedState.final
+                            if(currentSymbol not in chosenSymbols["init"]):
+                                chosenSymbols["init"].append(currentSymbol)
+
+                                newState = state(False, {})
+                                newTransition = transition(newState, currentSymbol)
+
+                                createdStates.append(newState)
+                                createdTransitions.append(newTransition)
+                                
+                                initUnionState.transitions[currentSymbol] = newTransition
+
+                                #Target state of this symbol in old automaton
+                                oldReferencedState = currentTransition.target
+                                newState.final = newState.final or oldReferencedState.final
+
+                                currentTransitionsTargets[newState.name] = [oldReferencedState.name]
+                                allReferences[oldReferencedState.name] = newState
+                            else: 
+                                #If symbol has already been chosen, it already has an state for it in the new automaton
+                                #In this case we just need to keep track the old target state of this transition
+                                oldReferencedState = currentTransition.target
+                                currentTransitionsTargets[newState.name].append(oldReferencedState.name)
+                                allReferences[oldReferencedState.name] = newState
+                                newState.final = newState.final or oldReferencedState.final
+                    else: #Rest of iterations
+                        transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateNameForCurrentSymbol)
+                        if currentSymbol == "empty":
+                            emptyTransitionTarget = allReferences[currentTransition.target.name]
+                            newTransition = transition(emptyTransitionTarget, "empty")
+                            transitionParentState.transitions["empty"] = newTransition
+                        else: #Same protocol as first iteration (remove separation later)
+                            if(currentSymbol not in chosenSymbols[transitionParentState.name]):
+                                chosenSymbols[transitionParentState.name].append(currentSymbol)
+
+                                newState = state(False, {})
+                                newTransition = transition(newState, currentSymbol)
+                                
+                                createdStates.append(newState)
+                                createdTransitions.append(newTransition)
+
+                                transitionParentState.transitions[currentSymbol] = newTransition
+
+                                oldReferencedState = currentTransition.target
+                                newState.final = newState.final or oldReferencedState.final
+
+                                currentTransitionsTargets[newState.name] = [oldReferencedState.name]
+                                allReferences[oldReferencedState.name] = newState
+                            else:
+                                oldReferencedState = currentTransition.target
+                                currentTransitionsTargets[newState.name].append(oldReferencedState.name)
+                                allReferences[oldReferencedState.name] = newState
+                                newState.final = newState.final or oldReferencedState.final
 
 
         #Go to next level
@@ -250,8 +259,8 @@ a2 = path(test2)
 a3 = path(test3)
 
 b = unionProcess([a1, a2, a3])
-print(b)
 b.treePrintAutomaton()
+print(b)
 
 
 # print(a1)
