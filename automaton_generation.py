@@ -64,6 +64,9 @@ def unionProcess(automatons : list) -> automaton:
         oldTransitionsTargets = currentTransitionsTargets
         currentTransitionsTargets = {}
 
+        #Keep track of created states, that need an "empty" transition attached to it in the future
+
+
         for p in pathsList: 
             aux = p.nextSymbols()
             aux.append(p.name)
@@ -85,6 +88,7 @@ def unionProcess(automatons : list) -> automaton:
                 chosenSymbols[j.name] = []
 
         print("#############################################")
+        print(lastStates)
         print(currentSymbols)
         print(oldTransitionsTargets)
 
@@ -242,10 +246,15 @@ b = unionProcess([a1, a2, a3])
 print(b)
 
 
+b.treePrintAutomaton()
+
+
 # print(a1)
 # print("########################################")
 # print(a2)
 # print("########################################")
 # print(a3)  
         
+
+#Next step, verify if union is OK, and remove "empty" transitions
 

@@ -1,3 +1,7 @@
+#For debug
+from treelib import Node, Tree
+
+
 class state():
     final : bool = False
     transitions : dict = {}
@@ -117,6 +121,27 @@ class automaton():
         if len(nextDepths) > 0: depth += nextDepths[0]
 
         return depth
+    
+    def buildTree(self, tree, currentState, calledStates):
+        calledStates.append(currentState)
+
+        for t in currentState.transitions:
+            nextState = currentState.transitions[t].target
+
+            if nextState not in calledStates:
+                tree.create_node(nextState.name, nextState.name, parent=currentState.name)
+                self.buildTree(tree, nextState, calledStates)
+
+    
+    def treePrintAutomaton(self):
+        #Build in treelibstructure
+        tree = Tree()
+        tree.create_node(self.initialState.name, self.initialState.name)
+
+        self.buildTree(tree, self.initialState, [])
+
+        tree.show()
+        
 
 
 def convertSymbol(regex, symbolIndex):
