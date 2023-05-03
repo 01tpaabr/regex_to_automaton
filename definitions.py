@@ -1,6 +1,5 @@
 #For debug
-from treelib import Node, Tree
-
+from treelib import Tree
 
 class state():
     final : bool = False
@@ -15,7 +14,7 @@ class state():
         self.name = "q" + str(state.name_counter)
         state.name_counter += 1
     
-    def has_transition(self, symbol) -> bool:
+    def hasTransition(self, symbol) -> bool:
         return symbol in self.transitions.keys()
     
     #Go one level deeper in path depth
@@ -54,24 +53,26 @@ class state():
 class transition():
     target : state = None
     symbol : str = ""
+    origin : state = None
 
-    def __init__(self, target, symbol) -> None:
+    def __init__(self, target, symbol, origin) -> None:
         self.target = target
         self.symbol = symbol
+        self.origin = origin
 
     def __str__(self) -> str:
-        return "Transition (" + str(self.target.name) + " , "+ str(self.symbol) +  " )"
+        return "Transition (" + str(self.origin.name) + ", "+ str(self.symbol) +  ", " + str(self.target.name) + " )"
     
     def __repr__(self) -> str:
-        return "Transition (" + str(self.target.name) + " , "+ str(self.symbol) +  " )"
+        return "Transition (" + str(self.origin.name) + ", "+ str(self.symbol) +  ", " + str(self.target.name) + " )"
 
 class automaton():
     initialState : state = None
     states : list = []
-    transitionsList : list = []
-
+    
     #For other acesses
     statesDict : dict = {}
+    transitionsList : list = []
 
     def __init__(self, initialState, states, statesDict, transitionsList) -> None:
         self.initialState = initialState
@@ -100,6 +101,33 @@ class automaton():
 
         return transitions
     
+    #Return list of all transitions
+    def symbolTransitions(self, symbol):
+        return list(filter(lambda t: t.symbol == symbol, self.transitionsList))
+    
+
+    def findPathAux(self, origin, target, lastSymbol, calledStates):
+        calledStates.append(origin)
+        #State Found
+        if origin == target:
+            return lastSymbol
+        
+        pathWord = ""
+        for t in origin.transitions:
+            #Does not take empty transitions, cycles, we just want the path 
+            if t != "empty" and origin.transitions[t].target not in calledStates: 
+                nextWord = self.findPathAux(origin.transitions[t].target, target, t, calledStates)
+
+                if nextWord != "":
+                    pathWord += lastSymbol + nextWord
+                    break
+                
+
+        return pathWord
+    
+    #Find which transitions should take to go to one state to another
+    def findPath(self, origin, target):
+        return self.findPathAux(origin, target, "", [])
 
     def depth(self):
         return self.depthAux(self.initialState, [])
@@ -122,6 +150,7 @@ class automaton():
 
         return depth
     
+    #Aux function
     def buildTree(self, tree, currentState, calledStates):
         calledStates.append(currentState)
 
@@ -133,8 +162,8 @@ class automaton():
                 self.buildTree(tree, nextState, calledStates)
 
     
-    def treePrintAutomaton(self):
-        #Build in treelibstructure
+    def treePrintAutomaton(self): #Does not show cycles
+        #Build in treelib structure
         tree = Tree()
         tree.create_node(self.initialState.name, self.initialState.name)
 

@@ -12,6 +12,47 @@ convertSymbol = definitions.convertSymbol
 # \symbol
 # |
 
+#Remove last step of non determinism, empty back transitions
+def removeEmpty(automaton) -> automaton:
+    emptyTransitions = automaton.symbolTransitions("empty")
+
+    print(emptyTransitions)
+
+    
+    for t in emptyTransitions:
+        automaton.transitionsList.remove(t)
+        
+        loopStart = t.target
+        loopFinish = t.origin
+
+        del(loopFinish.transitions["empty"])
+
+        #Find out which word is built in loop
+        loopWord = automaton.findPath(loopStart, loopFinish)
+
+
+        symbolCount = 0
+
+        #If possible, the back transition would need to have the same symbol as the start of the loop
+        transitionSymbol = loopWord[symbolCount]
+        loopStart = loopStart.transitions[transitionSymbol].target
+
+        while loopFinish.hasTransition(transitionSymbol):
+            #If this state has an transition with the symbol equal to transition symbol, we need to advance one state and try again
+            loopFinish = loopFinish.transitions[transitionSymbol].target
+
+            #Same for the transitionSymbol
+            symbolCount += 1
+            transitionSymbol = loopWord[symbolCount]
+
+            #Loop start will advance aswell
+            loopStart = loopStart.transitions[loopWord[symbolCount]].target
+
+        newTransition = transition(loopStart, transitionSymbol, loopFinish)
+        loopFinish.transitions[transitionSymbol] = newTransition
+        automaton.transitionsList.append(newTransition)
+    
+    return automaton
 
 #Aux function to find out which last state this transition needs to be handled in
 def findLastState(lastStatesList, oldReferenceStateDict, originalState):
@@ -22,8 +63,6 @@ def findLastState(lastStatesList, oldReferenceStateDict, originalState):
     
     for i in lastStatesList:
         if i.name == lastStateName: return i
-
-
 
 #Given automaton list, unify in one
 def unionProcess(automatons : list) -> automaton:
@@ -37,7 +76,6 @@ def unionProcess(automatons : list) -> automaton:
     #Hold current states being handled by iteration
     pathsList = list(map(lambda a: a.initialState, automatons))
     
-    
     initUnionState = state(False, {})
     union.states.append(initUnionState)
     union.initialState = initUnionState
@@ -50,16 +88,14 @@ def unionProcess(automatons : list) -> automaton:
     currentTransitionsTargets = {}
 
     lastStates = []
-    lastTransitions = []
 
-    #Keep track of all references from createad states to old states
+    #Keep track of all references from createad states to old  (used to handle epsilon transitions)
     allReferences = {}
 
     #Run till bigger path is processed
     for i in range(biggerPath.depth()):
         #Refresh data structures to new iteration
         lastStates = createdStates
-        lastTransitions = createdTransitions
 
         createdStates = []
         createdTransitions
@@ -107,17 +143,19 @@ def unionProcess(automatons : list) -> automaton:
                     if i == 0:
                         if currentSymbol == "empty":
                             emptyTransitionTarget = allReferences[currentTransition.target.name]
-                            newTransition = transition(emptyTransitionTarget, "empty")
+                            newTransition = transition(emptyTransitionTarget, "empty", initUnionState)
                             initUnionState.transitions["empty"] = newTransition
+                            union.transitionsList.append(newTransition)
                         else:
                             if(currentSymbol not in chosenSymbols["init"]):
                                 chosenSymbols["init"].append(currentSymbol)
 
                                 newState = state(False, {})
-                                newTransition = transition(newState, currentSymbol)
+                                newTransition = transition(newState, currentSymbol, initUnionState)
 
                                 createdStates.append(newState)
                                 createdTransitions.append(newTransition)
+                                union.transitionsList.append(newTransition)
                                 
                                 initUnionState.transitions[currentSymbol] = newTransition
 
@@ -138,17 +176,19 @@ def unionProcess(automatons : list) -> automaton:
                         transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateNameForCurrentSymbol)
                         if currentSymbol == "empty":
                             emptyTransitionTarget = allReferences[currentTransition.target.name]
-                            newTransition = transition(emptyTransitionTarget, "empty")
+                            newTransition = transition(emptyTransitionTarget, "empty", transitionParentState)
                             transitionParentState.transitions["empty"] = newTransition
-                        else: #Same protocol as first iteration (remove separation later)
+                            union.transitionsList.append(newTransition)
+                        else: #Same logic as first iteration (remove separation later)
                             if(currentSymbol not in chosenSymbols[transitionParentState.name]):
                                 chosenSymbols[transitionParentState.name].append(currentSymbol)
 
                                 newState = state(False, {})
-                                newTransition = transition(newState, currentSymbol)
+                                newTransition = transition(newState, currentSymbol, transitionParentState)
                                 
                                 createdStates.append(newState)
                                 createdTransitions.append(newTransition)
+                                union.transitionsList.append(newTransition)
 
                                 transitionParentState.transitions[currentSymbol] = newTransition
 
@@ -176,9 +216,9 @@ def unionProcess(automatons : list) -> automaton:
          
     return union
 
-#No | operator in this regex
+#No 'or' operator in this regex
 def path(regex : str) -> automaton:
-    operators = ["(", ")", "*", "|"]
+    operators = ["(", ")", "*"]
 
     a = automaton(None, [], {}, [])
 
@@ -203,7 +243,6 @@ def path(regex : str) -> automaton:
         if realSymbol == "(":
             openGroup += 1
 
-
         #Handle Group Closure
         if realSymbol == ")":
             startGroupState = groupStateStack.pop()
@@ -213,7 +252,7 @@ def path(regex : str) -> automaton:
                     startGroupState.final = True
 
                     #Add transition to go back to starting group state
-                    backTransition = transition(startGroupState, "empty")
+                    backTransition = transition(startGroupState, "empty", lastState)
                     a.transitionsList.append(backTransition)
                     lastState.transitions["empty"] = backTransition
 
@@ -231,7 +270,7 @@ def path(regex : str) -> automaton:
             #If there is no more characters left, this is an final state
             newState = state(not (i + 1 < len(regex)), {})
             
-            newTransition = transition(newState, symbol)
+            newTransition = transition(newState, symbol, lastState)
             a.transitionsList.append(newTransition)
             lastState.transitions[symbol] = newTransition
 
@@ -259,16 +298,6 @@ a2 = path(test2)
 a3 = path(test3)
 
 b = unionProcess([a1, a2, a3])
+removeEmpty(b)
 b.treePrintAutomaton()
-print(b)
-
-
-# print(a1)
-# print("########################################")
-# print(a2)
-# print("########################################")
-# print(a3)  
-        
-
-#Next step, verify if union is OK, and remove "empty" transitions
 
