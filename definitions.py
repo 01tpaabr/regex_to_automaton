@@ -3,7 +3,6 @@ from treelib import Tree
 
 from automata.fa.nfa import NFA
 
-
 class state():
     final : bool = False
     transitions : dict = {}
@@ -191,7 +190,7 @@ class automaton():
         
         
     
-    def showVisualDFA(self): #only DFA
+    def showVisualDFA(self, path): #only DFA
         results = [set(), set(), dict(), set()]
 
         for t in self.transitionsList:
@@ -200,7 +199,7 @@ class automaton():
         self.buildVisualAutomaton(self.initialState, [], results)
         
         nfa = NFA(states=results[0], input_symbols=results[3], transitions=results[2], initial_state=self.initialState.name, final_states=results[1])
-        nfa.show_diagram('./test.png')
+        nfa.show_diagram(path)
         
 
 

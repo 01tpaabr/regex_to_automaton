@@ -40,6 +40,7 @@ def removeEmpty(automaton) -> automaton:
 
             #Same for the transitionSymbol
             symbolCount += 1
+            if symbolCount == len(loopWord): symbolCount = 0
             transitionSymbol = loopWord[symbolCount]
 
             #Loop start will advance aswell
@@ -47,6 +48,7 @@ def removeEmpty(automaton) -> automaton:
 
         newTransition = transition(loopStart, transitionSymbol, loopFinish)
         loopFinish.transitions[transitionSymbol] = newTransition
+        loopFinish.final = True
         automaton.transitionsList.append(newTransition)
     
     return automaton
@@ -286,7 +288,7 @@ def path(regex : str) -> automaton:
 
     return a
 
-test = "a(ad(ab)bc)*"
+test = "a(adabbc)*"
 test2 = "bb((bc)*aa)*ad"
 test3 = "abd(acc)*(a)*"
 
@@ -296,5 +298,5 @@ a3 = path(test3)
 
 b = unionProcess([a1, a2, a3])
 removeEmpty(b)
-a1.showVisualDFA()
+b.showVisualDFA("./test.png")
 
