@@ -15,9 +15,6 @@ convertSymbol = definitions.convertSymbol
 #Remove last step of non determinism, empty back transitions
 def removeEmpty(automaton) -> automaton:
     emptyTransitions = automaton.symbolTransitions("empty")
-
-    print(emptyTransitions)
-
     
     for t in emptyTransitions:
         automaton.transitionsList.remove(t)
@@ -299,5 +296,5 @@ a3 = path(test3)
 
 b = unionProcess([a1, a2, a3])
 removeEmpty(b)
-b.treePrintAutomaton()
+a1.showVisualDFA()
 

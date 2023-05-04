@@ -1,6 +1,9 @@
 #For debug
 from treelib import Tree
 
+from automata.fa.nfa import NFA
+
+
 class state():
     final : bool = False
     transitions : dict = {}
@@ -170,6 +173,34 @@ class automaton():
         self.buildTree(tree, self.initialState, [])
 
         tree.show()
+
+    def buildVisualAutomaton(self, currentState, calledStates, nfa):
+        calledStates.append(currentState)
+        nfa[0].add(currentState.name)
+        
+        if currentState.final: nfa[1].add(currentState.name)
+
+        nfa[2][currentState.name] = {}
+
+        for t in currentState.transitions:
+            nextState = currentState.transitions[t].target
+            nfa[2][currentState.name][currentState.transitions[t].symbol] = {currentState.transitions[t].target.name}
+
+            if nextState not in calledStates:
+                self.buildVisualAutomaton(nextState, calledStates, nfa)
+        
+        
+    
+    def showVisualDFA(self): #only DFA
+        results = [set(), set(), dict(), set()]
+
+        for t in self.transitionsList:
+            results[3].add(t.symbol)
+        
+        self.buildVisualAutomaton(self.initialState, [], results)
+        
+        nfa = NFA(states=results[0], input_symbols=results[3], transitions=results[2], initial_state=self.initialState.name, final_states=results[1])
+        nfa.show_diagram('./test.png')
         
 
 
