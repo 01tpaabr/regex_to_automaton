@@ -4,6 +4,7 @@ automaton = definitions.automaton
 state = definitions.state
 transition = definitions.transition
 convertSymbol = definitions.convertSymbol
+regexTree = definitions.regexTree
 
 # (
 # )
@@ -288,9 +289,96 @@ def path(regex : str) -> automaton:
 
     return a
 
+#This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
+def buildRegexTree(regex : str, currNode : regexTree):
+    if regex[0] != "(": 
+        currNode.value = regex
+    else:
+
+        #Remove parentheses
+        regex = regex[1:-1]
+
+        openParentheses = 0
+
+        nextLevel = []
+
+        i = 0
+
+        currentWord = ""
+
+        while i < len(regex):
+            currentChar = regex[i]
+
+            if currentChar == "(": openParentheses += 1
+
+            if currentChar == ")": openParentheses += -1
+            
+            #Found next level reg exp
+            if currentChar == "|" and openParentheses == 0:
+                nextLevel.append(currentWord)
+                currentWord = ""
+                i += 1
+                continue
+
+            currentWord += currentChar
+
+            i += 1
+
+        nextLevel.append(currentWord)
+
+        for i in nextLevel:
+            if len(i) != 0: 
+                if i[len(i)-1] == "*":
+                    #We need to check if this * need's to be removed for next level of regex tree (diferentiate these two types of regex)
+                    #Ex: needs to be removed: ((ghi)*) / doesn't need to be removed (abd(acc)*(a)*)
+                    #Going to do this by counting parentheses, if parentheses count equals 0 more than one two times
+                    zeroCounts = 0
+                    auxParenthesesCount = 0
+
+                    for j in range(len(i)):
+                        if i[j] == "(": auxParenthesesCount += 1
+                        if i[j] == ")": auxParenthesesCount += -1
+
+                        if auxParenthesesCount == 0: zeroCounts += 1
+                    
+                    if zeroCounts == 2:
+                        #In this case we remove the *
+                        #and inform in the tree, by means of adding another node with '*' as value
+                        # we need to encapsulate the lower levels of this branch with an ()* operation, when building automaton
+
+                        i = i[0:-1]
+                        newTree = regexTree([], "*")
+                        currNode.value.append(i)
+                        currNode.children.append(newTree)
+
+                        currNode = newTree
+                        newTree = regexTree([], [])
+                        currNode.children.append(newTree)
+                    else:
+                        newTree = regexTree([], [])
+                        currNode.children.append(newTree)
+                else:
+                    newTree = regexTree([], [])
+                    currNode.value.append(i)
+                    currNode.children.append(newTree)
+
+                buildRegexTree(i, newTree)
+
+
+def genAutomaton(regexTree : regexTree) -> automaton:
+    #The automaton will be built from botton up, following these rules:
+    #Leaves of this tree will contain regex, that need to be given to 'path' function
+    #An parent node will be formed by the union of his children, by using their automaton as input to 'unionProcess' function
+    #An parent node with '*' value will have only one child and informs that it need's to be applied an ()* operation in his child automaton
+    
+    pass
+
 test = "a(adabbc)*"
 test2 = "bb((bc)*aa)*ad"
-test3 = "abd(acc)*(a)*"
+test3 = "(abd(acc)*(a)*)"
+
+test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|((ghi)*))|(((p)|(k))*))"
+
 
 a1 = path(test)
 a2 = path(test2)
@@ -298,5 +386,18 @@ a3 = path(test3)
 
 b = unionProcess([a1, a2, a3])
 removeEmpty(b)
-b.showVisualDFA("./test.png")
+
+testTree = regexTree([], [])
+testTree2 = regexTree([], [])
+
+buildRegexTree(test3, testTree)
+buildRegexTree(test4, testTree2)
+
+testTree.value = test3
+testTree2.value = test4
+
+testTree.treePrint()
+testTree2.treePrint()
+
+
 

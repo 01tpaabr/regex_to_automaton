@@ -51,7 +51,6 @@ class state():
     def __repr__(self) -> str:
         return "State " + self.name + ", is_final=" + str(self.final)
     
-
 class transition():
     target : state = None
     symbol : str = ""
@@ -200,6 +199,43 @@ class automaton():
         
         nfa = NFA(states=results[0], input_symbols=results[3], transitions=results[2], initial_state=self.initialState.name, final_states=results[1])
         nfa.show_diagram(path)
+        
+class regexTree():
+    value = None
+    children : list = None
+
+    #just for print
+    diferentiator = "'"
+
+    def __init__(self, children, value) -> None:
+        self.children = children
+        self.value = value
+    
+    def buildTree(self, tree, currNode, calledNodes):
+        calledNodes.append(currNode)
+
+        
+        for n in currNode.children:
+            nextNode = n
+            if nextNode.value != []:
+                if nextNode not in calledNodes:
+                    if nextNode.value == "*": 
+                        nextNode.value += str(regexTree.diferentiator)
+                        regexTree.diferentiator += "'"
+
+                    tree.create_node(str(nextNode.value), str(nextNode.value), parent=str(currNode.value))
+                    self.buildTree(tree, nextNode, calledNodes)
+
+
+    def treePrint(self):
+        #Build in treelib structure
+        tree = Tree()
+
+        tree.create_node(str(self.value), str(self.value))
+
+        self.buildTree(tree, self, [])
+
+        tree.show()
         
 
 
