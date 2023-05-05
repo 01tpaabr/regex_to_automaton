@@ -364,20 +364,49 @@ def buildRegexTree(regex : str, currNode : regexTree):
 
                 buildRegexTree(i, newTree)
 
+def applyAsterisc(a : automaton) -> automaton:
+    pass
 
-def genAutomaton(regexTree : regexTree) -> automaton:
+
+def genFinalAutomaton(regexTree : regexTree) -> automaton:
     #The automaton will be built from botton up, following these rules:
     #Leaves of this tree will contain regex, that need to be given to 'path' function
     #An parent node will be formed by the union of his children, by using their automaton as input to 'unionProcess' function
     #An parent node with '*' value will have only one child and informs that it need's to be applied an ()* operation in his child automaton
+    unionList = []
+
+    if len(regexTree.children) > 1 :
+        for i in regexTree.children:
+            unionList.append(genFinalAutomaton(i))
+        
+        unionResult = unionProcess(unionList)
+
+        return unionResult
     
-    pass
+    if regexTree.children[0].value[0] == "*":
+        #Go down to asterisc level
+        regexTree = regexTree.children[0]
+
+        if len(regexTree.children) > 1:
+            for i in regexTree.children:
+                unionList.append(genFinalAutomaton(i))
+        
+            unionResult = unionProcess(unionList)
+
+            asteriscResult = applyAsterisc(unionResult)
+        else:
+            asteriscResult = applyAsterisc(genFinalAutomaton(regexTree[0]))
+        
+        return asteriscResult
+    
+    #Basic case, found leaf
+    return path(regexTree.children[0].value)
 
 test = "a(adabbc)*"
 test2 = "bb((bc)*aa)*ad"
 test3 = "(abd(acc)*(a)*)"
 
-test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|((ghi)*))|(((p)|(k))*))"
+test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(ghi))|((p)|(k)))"
 
 
 a1 = path(test)
@@ -392,6 +421,11 @@ testTree2 = regexTree([], [])
 
 buildRegexTree(test3, testTree)
 buildRegexTree(test4, testTree2)
+abc = genFinalAutomaton(testTree2)
+removeEmpty(abc)
+
+
+abc.showVisualDFA("./test2.png")
 
 testTree.value = test3
 testTree2.value = test4
