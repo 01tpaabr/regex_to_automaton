@@ -364,8 +364,9 @@ def buildRegexTree(regex : str, currNode : regexTree):
 
                 buildRegexTree(i, newTree)
 
-def applyAsterisc(a : automaton) -> automaton:
-    pass
+def applyStar(a : automaton) -> automaton:
+    b = a.findLastStates(a.initialState)
+    print(b)
 
 
 def genFinalAutomaton(regexTree : regexTree) -> automaton:
@@ -393,9 +394,9 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
         
             unionResult = unionProcess(unionList)
 
-            asteriscResult = applyAsterisc(unionResult)
+            asteriscResult = applyStar(unionResult)
         else:
-            asteriscResult = applyAsterisc(genFinalAutomaton(regexTree[0]))
+            asteriscResult = applyStar(genFinalAutomaton(regexTree[0]))
         
         return asteriscResult
     
@@ -410,6 +411,8 @@ test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(ghi))|((p)|(k)))"
 
 
 a1 = path(test)
+
+applyStar(a1)
 a2 = path(test2)
 a3 = path(test3)
 
@@ -425,13 +428,13 @@ abc = genFinalAutomaton(testTree2)
 removeEmpty(abc)
 
 
-abc.showVisualDFA("./test2.png")
+# abc.showVisualDFA("./test2.png")
 
 testTree.value = test3
 testTree2.value = test4
 
-testTree.treePrint()
-testTree2.treePrint()
+# testTree.treePrint()
+# testTree2.treePrint()
 
 
 

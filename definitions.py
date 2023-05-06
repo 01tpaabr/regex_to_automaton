@@ -123,7 +123,6 @@ class automaton():
                     pathWord += lastSymbol + nextWord
                     break
                 
-
         return pathWord
     
     #Find which transitions should take to go to one state to another
@@ -151,6 +150,23 @@ class automaton():
 
         return depth
     
+    #Function just work before application of 'removeEmpty' function
+    def findLastStates(self, currState):
+        hasNextTransition = False
+
+        finalStatesList = []
+
+        for t in currState.transitions:
+            if t != "empty":
+                hasNextTransition = True
+                finalStatesList.append(self.findLastStates(currState.transitions[t].target))
+        
+
+        if not hasNextTransition:
+            return currState
+        
+        return finalStatesList          
+
     #Aux function
     def buildTree(self, tree, currentState, calledStates):
         calledStates.append(currentState)
@@ -187,8 +203,6 @@ class automaton():
             if nextState not in calledStates:
                 self.buildVisualAutomaton(nextState, calledStates, nfa)
         
-        
-    
     def showVisualDFA(self, path): #only DFA
         results = [set(), set(), dict(), set()]
 
