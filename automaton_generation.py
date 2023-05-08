@@ -365,8 +365,15 @@ def buildRegexTree(regex : str, currNode : regexTree):
                 buildRegexTree(i, newTree)
 
 def applyStar(a : automaton) -> automaton:
-    b = a.findLastStates(a.initialState)
-    print(b)
+    finalStates = a.findLastStates(a.initialState, [])
+    
+    #Apply empty transitions from finalStates to initial State
+    for i in finalStates:
+      newTransition = transition(a.initialState, "empty", i)
+      a.transitionsList.append(newTransition)
+
+      i.transitions["empty"] = newTransition
+
 
 
 def genFinalAutomaton(regexTree : regexTree) -> automaton:
@@ -394,20 +401,20 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
         
             unionResult = unionProcess(unionList)
 
-            asteriscResult = applyStar(unionResult)
+            asteriscResult = applyStar(removeEmpty(unionResult))
         else:
-            asteriscResult = applyStar(genFinalAutomaton(regexTree[0]))
+            asteriscResult = applyStar(removeEmpty(genFinalAutomaton(regexTree[0])))
         
         return asteriscResult
     
     #Basic case, found leaf
     return path(regexTree.children[0].value)
 
-test = "a(adabbc)*"
+test = "a(bac)*"
 test2 = "bb((bc)*aa)*ad"
 test3 = "(abd(acc)*(a)*)"
 
-test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(ghi))|((p)|(k)))"
+test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(ghi)*))|((p)|(k)))"
 
 
 a1 = path(test)

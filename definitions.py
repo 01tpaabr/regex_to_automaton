@@ -151,19 +151,17 @@ class automaton():
         return depth
     
     #Function just work before application of 'removeEmpty' function
-    def findLastStates(self, currState):
+    def findLastStates(self, currState, finalStatesList):
         hasNextTransition = False
-
-        finalStatesList = []
 
         for t in currState.transitions:
             if t != "empty":
                 hasNextTransition = True
-                finalStatesList.append(self.findLastStates(currState.transitions[t].target))
+                self.findLastStates(currState.transitions[t].target, finalStatesList)
         
 
         if not hasNextTransition:
-            return currState
+            finalStatesList.append(currState)
         
         return finalStatesList          
 
