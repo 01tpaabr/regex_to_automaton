@@ -133,6 +133,8 @@ def unionProcess(automatons : list) -> automaton:
 
                 for k in pathsList:
                     if k.name == originalStateNameForCurrentSymbol: originalStateForCurrentSymbol = k
+                
+
 
                 #Last place holds state that originated the transitions (not an symbol to be iterated)
                 if not s == len(currentSymbols[j]) - 1:
@@ -164,7 +166,8 @@ def unionProcess(automatons : list) -> automaton:
                                 newState.final = newState.final or oldReferencedState.final
 
                                 currentTransitionsTargets[newState.name] = [oldReferencedState.name]
-                                allReferences[oldReferencedState.name] = newState
+
+                                allReferences[oldReferencedState.name] = newState    
                             else: 
                                 #If symbol has already been chosen, it already has an state for it in the new automaton
                                 #In this case we just need to keep track the old target state of this transition
@@ -172,6 +175,8 @@ def unionProcess(automatons : list) -> automaton:
                                 currentTransitionsTargets[newState.name].append(oldReferencedState.name)
                                 allReferences[oldReferencedState.name] = newState
                                 newState.final = newState.final or oldReferencedState.final
+
+                            allReferences[originalStateNameForCurrentSymbol] = initUnionState
                     else: #Rest of iterations
                         transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateNameForCurrentSymbol)
                         if currentSymbol == "empty":
@@ -369,11 +374,33 @@ def applyStar(a : automaton) -> automaton:
     
     #Apply empty transitions from finalStates to initial State
     for i in finalStates:
-      newTransition = transition(a.initialState, "empty", i)
-      a.transitionsList.append(newTransition)
+        if "empty" not in i.transitions.keys():
+            newTransition = transition(a.initialState, "empty", i)
 
-      i.transitions["empty"] = newTransition
+            a.transitionsList.append(newTransition)
+            i.transitions["empty"] = newTransition
 
+            a.initialState.final = True
+        else:
+            #We need to add another state before adding empty transition, to keep one transition for which symbol in each state
+            firstPathWord = a.findPath(a.initialState, i)[0]
+            newState = state(False, {})
+            a.states.append(newState)
+
+            newTransition = transition(newState, firstPathWord, i)
+            a.transitionsList.append(newTransition)
+            newState.transitions[firstPathWord] = newTransition
+            a.statesDict[newState.name] = newState
+
+            #Now we add the empty transition to first state + 1
+            newTransition = transition(a.initialState.transitions[firstPathWord].target, "empty", newState)
+
+            a.transitionsList.append(newTransition)
+            i.transitions["empty"] = newTransition
+
+            a.initialState.final = True
+    
+    return a
 
 
 def genFinalAutomaton(regexTree : regexTree) -> automaton:
@@ -390,22 +417,21 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
         unionResult = unionProcess(unionList)
 
         return unionResult
-    
+
     if regexTree.children[0].value[0] == "*":
         #Go down to asterisc level
         regexTree = regexTree.children[0]
-
         if len(regexTree.children) > 1:
             for i in regexTree.children:
                 unionList.append(genFinalAutomaton(i))
         
             unionResult = unionProcess(unionList)
 
-            asteriscResult = applyStar(removeEmpty(unionResult))
+            asteriscResult = applyStar(unionResult)
         else:
-            asteriscResult = applyStar(removeEmpty(genFinalAutomaton(regexTree[0])))
-        
+            asteriscResult = applyStar(genFinalAutomaton(regexTree.children[0]))
         return asteriscResult
+        
     
     #Basic case, found leaf
     return path(regexTree.children[0].value)
@@ -414,17 +440,17 @@ test = "a(bac)*"
 test2 = "bb((bc)*aa)*ad"
 test3 = "(abd(acc)*(a)*)"
 
-test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(ghi)*))|((p)|(k)))"
+test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(k)))"
 
 
-a1 = path(test)
+# a1 = path(test)
 
-applyStar(a1)
-a2 = path(test2)
-a3 = path(test3)
+# applyStar(a1)
+# a2 = path(test2)
+# a3 = path(test3)
 
-b = unionProcess([a1, a2, a3])
-removeEmpty(b)
+# b = unionProcess([a1, a2, a3])
+# removeEmpty(b)
 
 testTree = regexTree([], [])
 testTree2 = regexTree([], [])
@@ -434,11 +460,12 @@ buildRegexTree(test4, testTree2)
 abc = genFinalAutomaton(testTree2)
 removeEmpty(abc)
 
-
-# abc.showVisualDFA("./test2.png")
+abc.showVisualDFA("./test2.png")
 
 testTree.value = test3
+
 testTree2.value = test4
+
 
 # testTree.treePrint()
 # testTree2.treePrint()
