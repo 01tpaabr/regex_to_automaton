@@ -80,6 +80,9 @@ class automaton():
         self.states = states
         self.statesDict = statesDict
         self.transitionsList = transitionsList
+    
+    def __repr__(self) -> str:
+        return "Automaton (" + str(self.initialState) +  ")"
 
     def __str__(self) -> str:
         string = "Start state: " + str(self.initialState.name) + "\n"
@@ -133,6 +136,7 @@ class automaton():
         return self.depthAux(self.initialState, [])
     
     def depthAux(self, currentState, calledStates):
+        
         depth = 1
 
         nextDepths = []
@@ -140,11 +144,12 @@ class automaton():
 
         for i in currentState.transitions:
             nextState = currentState.transitions[i].target
+            
 
             if nextState not in calledStates:
                 nextDepths.append(self.depthAux(nextState, calledStates))
-            
-            nextDepths.sort()
+
+        nextDepths.sort(reverse=True)
 
         if len(nextDepths) > 0: depth += nextDepths[0]
 

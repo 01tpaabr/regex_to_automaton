@@ -72,6 +72,7 @@ def unionProcess(automatons : list) -> automaton:
     automatons = sorted(automatons, key = lambda a: a.depth(), reverse=True)
 
     biggerPath = automatons[0]
+    
 
     #Hold current states being handled by iteration
     pathsList = list(map(lambda a: a.initialState, automatons))
@@ -91,7 +92,7 @@ def unionProcess(automatons : list) -> automaton:
 
     #Keep track of all references from createad states to old  (used to handle epsilon transitions)
     allReferences = {}
-
+    
     #Run till bigger path is processed
     for i in range(biggerPath.depth()):
         #Refresh data structures to new iteration
@@ -129,7 +130,10 @@ def unionProcess(automatons : list) -> automaton:
 
         for j in range(len(currentSymbols)):
             for s in range(len(currentSymbols[j])):
+
                 originalStateNameForCurrentSymbol = currentSymbols[j][len(currentSymbols[j]) - 1]
+                
+
 
                 for k in pathsList:
                     if k.name == originalStateNameForCurrentSymbol: originalStateForCurrentSymbol = k
@@ -218,7 +222,7 @@ def unionProcess(automatons : list) -> automaton:
         
         for t in createdTransitions:
             union.transitionsList.append(t)
-         
+    
     return union
 
 #No 'or' operator in this regex
@@ -402,7 +406,6 @@ def applyStar(a : automaton) -> automaton:
     
     return a
 
-
 def genFinalAutomaton(regexTree : regexTree) -> automaton:
     #The automaton will be built from botton up, following these rules:
     #Leaves of this tree will contain regex, that need to be given to 'path' function
@@ -411,25 +414,27 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
     unionList = []
 
     if len(regexTree.children) > 1 :
+
         for i in regexTree.children:
             unionList.append(genFinalAutomaton(i))
         
         unionResult = unionProcess(unionList)
-
+        
         return unionResult
+    
 
     if regexTree.children[0].value[0] == "*":
         #Go down to asterisc level
         regexTree = regexTree.children[0]
-        if len(regexTree.children) > 1:
-            for i in regexTree.children:
-                unionList.append(genFinalAutomaton(i))
         
-            unionResult = unionProcess(unionList)
+        if len(regexTree.children[0].value) > 1:
+            child = genFinalAutomaton(regexTree.children[0])
 
-            asteriscResult = applyStar(unionResult)
+            asteriscResult = applyStar(child)
+
         else:
             asteriscResult = applyStar(genFinalAutomaton(regexTree.children[0]))
+        
         return asteriscResult
         
     
@@ -440,7 +445,7 @@ test = "a(bac)*"
 test2 = "bb((bc)*aa)*ad"
 test3 = "(abd(acc)*(a)*)"
 
-test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(k)))"
+test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
 
 # a1 = path(test)
@@ -460,7 +465,7 @@ buildRegexTree(test4, testTree2)
 abc = genFinalAutomaton(testTree2)
 removeEmpty(abc)
 
-abc.showVisualDFA("./test2.png")
+abc.showVisualDFA("./test.png")
 
 testTree.value = test3
 
@@ -468,7 +473,7 @@ testTree2.value = test4
 
 
 # testTree.treePrint()
-# testTree2.treePrint()
+testTree2.treePrint()
 
 
 
