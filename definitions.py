@@ -10,6 +10,9 @@ class state():
     name_counter : int = 0
     name : str = ""
 
+    #for final states
+    tokenType : str = ""
+
     def __init__(self, final, transitions) -> None:
         self.final = final
         self.transitions = transitions
@@ -43,7 +46,7 @@ class state():
         for i in self.transitions.keys():
             string += str(self.transitions[i]) + "\n"
         
-        return string 
+        return string
 
     def __str__(self) -> str:
         return "State " + self.name + ", is_final=" + str(self.final)
@@ -253,7 +256,6 @@ class regexTree():
         self.buildTree(tree, self, [])
 
         tree.show()
-        
 
 
 def convertSymbol(regex, symbolIndex):

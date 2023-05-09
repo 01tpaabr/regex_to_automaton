@@ -300,7 +300,7 @@ def path(regex : str) -> automaton:
 
 #This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
 def buildRegexTree(regex : str, currNode : regexTree):
-    if regex[0] != "(": 
+    if regex[0] != "(":
         currNode.value = regex
     else:
 
@@ -441,39 +441,18 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
     #Basic case, found leaf
     return path(regexTree.children[0].value)
 
-test = "a(bac)*"
-test2 = "bb((bc)*aa)*ad"
-test3 = "(abd(acc)*(a)*)"
-
-test4 = "((bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
-
-
-# a1 = path(test)
-
-# applyStar(a1)
-# a2 = path(test2)
-# a3 = path(test3)
-
-# b = unionProcess([a1, a2, a3])
-# removeEmpty(b)
+test = "(((a)|(b))(cd))" #Criar função que falta
+old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
 testTree = regexTree([], [])
-testTree2 = regexTree([], [])
+buildRegexTree(test, testTree)
+testTree.value = test
 
-buildRegexTree(test3, testTree)
-buildRegexTree(test4, testTree2)
-abc = genFinalAutomaton(testTree2)
-removeEmpty(abc)
+testAutomaton = genFinalAutomaton(testTree)
+removeEmpty(testAutomaton)
 
-abc.showVisualDFA("./test.png")
+testAutomaton.showVisualDFA("./test.png")
 
-testTree.value = test3
-
-testTree2.value = test4
-
-
-# testTree.treePrint()
-testTree2.treePrint()
 
 
 
