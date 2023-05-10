@@ -226,6 +226,7 @@ def unionProcess(automatons : list) -> automaton:
     return union
 
 #No 'or' operator in this regex
+#Ex of input (abcd(a(b)*c)*)
 def path(regex : str) -> automaton:
     operators = ["(", ")", "*"]
 
@@ -247,10 +248,27 @@ def path(regex : str) -> automaton:
     i = 0
     while i < len(regex):
         realSymbol = regex[i]
-        symbol = convertSymbol(regex, i)
+        separatePath = False
         
         if realSymbol == "(":
             openGroup += 1
+        
+        if separatePath:
+          separatePath = False
+          newStatePath = state(False, {})
+          newPathTransition = transition(newStatePath, realSymbol, lastState)
+
+          #Go to next state and try again
+          while realSymbol in lastState.transitions:
+            lastState = lastState.transitions[realSymbol].target
+            #Advance one symbol as well
+            i += 1
+            realSymbol = regex[i]
+
+          lastState.transitions[realSymbol] = newPathTransition
+          a.transitionsList.append(newPathTransition)
+          
+          lastState = newPathTransition
 
         #Handle Group Closure
         if realSymbol == ")":
@@ -264,6 +282,11 @@ def path(regex : str) -> automaton:
                     backTransition = transition(startGroupState, "empty", lastState)
                     a.transitionsList.append(backTransition)
                     lastState.transitions["empty"] = backTransition
+
+                    #Fix *
+                    separatePath = True
+                    lastPath = startGroupState
+                    
 
                     if i + 1 == len(regex) - 1:
                         lastState.final = True
@@ -279,9 +302,9 @@ def path(regex : str) -> automaton:
             #If there is no more characters left, this is an final state
             newState = state(not (i + 1 < len(regex)), {})
             
-            newTransition = transition(newState, symbol, lastState)
+            newTransition = transition(newState, realSymbol, lastState)
             a.transitionsList.append(newTransition)
-            lastState.transitions[symbol] = newTransition
+            lastState.transitions[realSymbol] = newTransition
 
             #Handle '('
             while openGroup:
@@ -445,8 +468,8 @@ test = "(((a)|(b))(cd))" #Criar função que falta
 old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
 testTree = regexTree([], [])
-buildRegexTree(test, testTree)
-testTree.value = test
+buildRegexTree(old, testTree)
+testTree.value = old
 
 testAutomaton = genFinalAutomaton(testTree)
 removeEmpty(testAutomaton)
