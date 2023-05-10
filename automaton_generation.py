@@ -139,7 +139,6 @@ def unionProcess(automatons : list) -> automaton:
                     if k.name == originalStateNameForCurrentSymbol: originalStateForCurrentSymbol = k
                 
 
-
                 #Last place holds state that originated the transitions (not an symbol to be iterated)
                 if not s == len(currentSymbols[j]) - 1:
                     currentSymbol = currentSymbols[j][s]
@@ -164,7 +163,7 @@ def unionProcess(automatons : list) -> automaton:
                                 union.transitionsList.append(newTransition)
                                 
                                 initUnionState.transitions[currentSymbol] = newTransition
-
+                               
                                 #Target state of this symbol in old automaton
                                 oldReferencedState = currentTransition.target
                                 newState.final = newState.final or oldReferencedState.final
@@ -175,13 +174,14 @@ def unionProcess(automatons : list) -> automaton:
                             else: 
                                 #If symbol has already been chosen, it already has an state for it in the new automaton
                                 #In this case we just need to keep track the old target state of this transition
+                                chosenState = union.initialState.transitions[currentSymbol].target
                                 oldReferencedState = currentTransition.target
-                                currentTransitionsTargets[newState.name].append(oldReferencedState.name)
-                                allReferences[oldReferencedState.name] = newState
-                                newState.final = newState.final or oldReferencedState.final
+                                currentTransitionsTargets[chosenState.name].append(oldReferencedState.name)
+                                allReferences[oldReferencedState.name] = chosenState
+                                chosenState.final = chosenState.final or oldReferencedState.final
 
                             allReferences[originalStateNameForCurrentSymbol] = initUnionState
-                    else: #Rest of iterations
+                    else: #Rest of 
                         transitionParentState = findLastState(lastStates, oldTransitionsTargets, originalStateNameForCurrentSymbol)
                         if currentSymbol == "empty":
                             emptyTransitionTarget = allReferences[currentTransition.target.name]
@@ -202,15 +202,21 @@ def unionProcess(automatons : list) -> automaton:
                                 transitionParentState.transitions[currentSymbol] = newTransition
 
                                 oldReferencedState = currentTransition.target
+
                                 newState.final = newState.final or oldReferencedState.final
 
                                 currentTransitionsTargets[newState.name] = [oldReferencedState.name]
                                 allReferences[oldReferencedState.name] = newState
                             else:
                                 oldReferencedState = currentTransition.target
+
+                                for p in createdStates:
+                                    if currentSymbol in p.transitions:
+                                        chosenState = p
+
                                 currentTransitionsTargets[newState.name].append(oldReferencedState.name)
-                                allReferences[oldReferencedState.name] = newState
-                                newState.final = newState.final or oldReferencedState.final
+                                allReferences[oldReferencedState.name] = chosenState
+                                chosenState.final = chosenState.final or oldReferencedState.final
 
 
         #Go to next level
@@ -222,7 +228,7 @@ def unionProcess(automatons : list) -> automaton:
         
         for t in createdTransitions:
             union.transitionsList.append(t)
-    
+        
     return union
 
 #No 'or' operator in this regex
@@ -295,6 +301,7 @@ def path(regex : str) -> automaton:
             lastState = newState
         
         i += 1
+
 
     return a
 
@@ -441,17 +448,22 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
     #Basic case, found leaf
     return path(regexTree.children[0].value)
 
-test = "(((a)|(b))(cd))" #Criar função que falta
+test = "(((a)|(b))(cd))" #Criar função que falta, (concatenação)
 old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
 testTree = regexTree([], [])
-buildRegexTree(test, testTree)
-testTree.value = test
+buildRegexTree(old, testTree)
+testTree.value = old
 
 testAutomaton = genFinalAutomaton(testTree)
 removeEmpty(testAutomaton)
 
 testAutomaton.showVisualDFA("./test.png")
+
+#Consertar união (problema "x a")
+#Modificar *
+#Modificar união *
+
 
 
 
