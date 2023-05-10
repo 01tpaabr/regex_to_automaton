@@ -63,12 +63,14 @@ def findLastState(lastStatesList, oldReferenceStateDict, originalState):
     
     for i in lastStatesList:
         if i.name == lastStateName: return i
+global count
+count = 0
+count += 1
 
 #Given automaton list, unify in one
 def unionProcess(automatons : list) -> automaton:
     #Variable representing how much of the 
     union = automaton(None, [], {}, [])
-
     automatons = sorted(automatons, key = lambda a: a.depth(), reverse=True)
 
     biggerPath = automatons[0]
@@ -144,6 +146,8 @@ def unionProcess(automatons : list) -> automaton:
                 if not s == len(currentSymbols[j]) - 1:
                     currentSymbol = currentSymbols[j][s]
                     currentTransition = currentTransitions[j][s]
+
+                    print(currentSymbols)
                     
                     #First iteration
                     if i == 0:
@@ -167,7 +171,8 @@ def unionProcess(automatons : list) -> automaton:
 
                                 #Target state of this symbol in old automaton
                                 oldReferencedState = currentTransition.target
-                                newState.final = newState.final or oldReferencedState.final
+
+                                newState.final = newState.final in union.findLastStates(union.initialState, []) or oldReferencedState.final in union.findLastStates(union.initialState, [])
 
                                 currentTransitionsTargets[newState.name] = [oldReferencedState.name]
 
@@ -178,7 +183,7 @@ def unionProcess(automatons : list) -> automaton:
                                 oldReferencedState = currentTransition.target
                                 currentTransitionsTargets[newState.name].append(oldReferencedState.name)
                                 allReferences[oldReferencedState.name] = newState
-                                newState.final = newState.final or oldReferencedState.final
+                                newState.final = newState.final in union.findLastStates(union.initialState, []) or oldReferencedState.final in union.findLastStates(union.initialState, [])
 
                             allReferences[originalStateNameForCurrentSymbol] = initUnionState
                     else: #Rest of iterations
@@ -202,7 +207,7 @@ def unionProcess(automatons : list) -> automaton:
                                 transitionParentState.transitions[currentSymbol] = newTransition
 
                                 oldReferencedState = currentTransition.target
-                                newState.final = newState.final or oldReferencedState.final
+                                newState.final = newState.final in union.findLastStates(union.initialState, []) or oldReferencedState.final in union.findLastStates(union.initialState, [])
 
                                 currentTransitionsTargets[newState.name] = [oldReferencedState.name]
                                 allReferences[oldReferencedState.name] = newState
@@ -210,7 +215,7 @@ def unionProcess(automatons : list) -> automaton:
                                 oldReferencedState = currentTransition.target
                                 currentTransitionsTargets[newState.name].append(oldReferencedState.name)
                                 allReferences[oldReferencedState.name] = newState
-                                newState.final = newState.final or oldReferencedState.final
+                                newState.final = newState.final in union.findLastStates(union.initialState, []) or oldReferencedState.final in union.findLastStates(union.initialState, [])
 
 
         #Go to next level
@@ -222,7 +227,9 @@ def unionProcess(automatons : list) -> automaton:
         
         for t in createdTransitions:
             union.transitionsList.append(t)
-    
+    global count
+    union.showVisualDFA("./a" + str(count) +".png")
+    count += 1
     return union
 
 #No 'or' operator in this regex
@@ -276,7 +283,7 @@ def path(regex : str) -> automaton:
             #Not last
             if i < len(regex) - 1:
                 if regex[i + 1] == "*":
-                    startGroupState.final = True
+                    startGroupState.final = (startGroupState == a.initialState)
 
                     #Add transition to go back to starting group state
                     backTransition = transition(startGroupState, "empty", lastState)
@@ -318,7 +325,6 @@ def path(regex : str) -> automaton:
             lastState = newState
         
         i += 1
-
     return a
 
 #This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
@@ -470,6 +476,8 @@ old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(
 testTree = regexTree([], [])
 buildRegexTree(old, testTree)
 testTree.value = old
+
+testTree.treePrint()
 
 testAutomaton = genFinalAutomaton(testTree)
 removeEmpty(testAutomaton)
