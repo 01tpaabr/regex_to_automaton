@@ -1,4 +1,5 @@
 import definitions
+import copy
 
 automaton = definitions.automaton
 state = definitions.state
@@ -12,6 +13,9 @@ regexTree = definitions.regexTree
 # .
 # \symbol
 # |
+
+global count
+count = 0
 
 #Remove last step of non determinism, empty back transitions
 def removeEmpty(automaton) -> automaton:
@@ -70,6 +74,7 @@ def unionProcess(automatons : list) -> automaton:
     union = automaton(None, [], {}, [])
 
     automatons = sorted(automatons, key = lambda a: a.depth(), reverse=True)
+
 
     biggerPath = automatons[0]
     
@@ -228,8 +233,23 @@ def unionProcess(automatons : list) -> automaton:
         
         for t in createdTransitions:
             union.transitionsList.append(t)
-        
+    
+    union.showVisualDFA("./test2.png")
     return union
+
+
+def postProcessPath(pathAutomaton) -> automaton:
+    global count
+    pathAutomaton.showVisualDFA("./a" + str(count) +'.png')
+
+    
+    count += 1
+    
+    original = copy.deepcopy(pathAutomaton)
+    print(pathAutomaton.findPathCycles())
+
+
+
 
 #No 'or' operator in this regex
 def path(regex : str) -> automaton:
@@ -302,7 +322,7 @@ def path(regex : str) -> automaton:
         
         i += 1
 
-
+    postProcessPath(a)
     return a
 
 #This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
