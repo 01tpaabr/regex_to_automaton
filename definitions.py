@@ -158,6 +158,41 @@ class automaton():
 
         return depth
     
+    #Find cycles in 'path' automatons using help of "empty" back transitions
+    def findPathCycles(self):
+        startStates = [self.initialState]
+        currState = self.initialState
+        cyclesList = []
+
+        chosenTransition = False
+
+        for i in currState.transitions:
+            if i != "empty":
+                chosenTransition = currState.transitions[i]
+
+        finished = False
+
+        while chosenTransition:
+            if "empty" in currState.transitions:
+                cyclesList.append([startStates.pop(), currState])
+                finished = True
+            
+            chosenTransition = False
+
+            for i in currState.transitions:
+                if i != "empty":
+                    chosenTransition = currState.transitions[i]
+            
+                if chosenTransition: currState = chosenTransition.target
+
+            if finished:
+                finished = False
+                startStates.append(currState)
+        
+        return cyclesList
+
+        
+    
     #Function just work before application of 'removeEmpty' function
     def findLastStates(self, currState, finalStatesList):
         hasNextTransition = False
