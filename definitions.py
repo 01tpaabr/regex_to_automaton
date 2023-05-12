@@ -160,7 +160,6 @@ class automaton():
     
     #Find cycles in 'path' automatons using help of "empty" back transitions
     def findPathCycles(self):
-        startStates = [self.initialState]
         currState = self.initialState
         cyclesList = []
 
@@ -174,8 +173,8 @@ class automaton():
 
         while chosenTransition:
             if "empty" in currState.transitions:
-                cyclesList.append([startStates.pop(), currState])
-                finished = True
+                cyclesList.append([currState.transitions["empty"].target, currState])
+                # finished = True
             
             chosenTransition = False
 
@@ -184,10 +183,6 @@ class automaton():
                     chosenTransition = currState.transitions[i]
             
                 if chosenTransition: currState = chosenTransition.target
-
-            if finished:
-                finished = False
-                startStates.append(currState)
         
         return cyclesList
 

@@ -237,16 +237,35 @@ def unionProcess(automatons : list) -> automaton:
     union.showVisualDFA("./test2.png")
     return union
 
+def concat(a, b, finalAStates):
+  
+
 
 def postProcessPath(pathAutomaton) -> automaton:
     global count
     pathAutomaton.showVisualDFA("./a" + str(count) +'.png')
-
-    
     count += 1
     
     original = copy.deepcopy(pathAutomaton)
-    print(pathAutomaton.findPathCycles())
+    cycles = pathAutomaton.findPathCycles()
+
+    for i in cycles:
+      finishState = i[1]
+      startState = i[0]
+
+      
+      for j in finishState.transitions:
+        attemptedState = startState
+        attemptedTransition = j
+        targetState = finishState.transitions[j].target
+
+        #Finish
+        if attemptedTransition != "empty":
+          while attemptedTransition in attemptedState.transitions:
+            #Go to next state
+            attemptedState = attemptedState.transitions[j].target
+            if attemptedTransition in targetState.transitions:
+              pass
 
 
 
