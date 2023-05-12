@@ -113,17 +113,48 @@ class automaton():
         return list(filter(lambda t: t.symbol == symbol, self.transitionsList))
     
 
-    def findPathAux(self, origin, target, lastSymbol, calledStates):
+    def findPathAux(self, origin, target, lastSymbol, calledStates, startLoop):
         calledStates.append(origin)
+        noLastSymbol = False
+        pathWord = ""
+
+        #Other loop
+        for i in origin.transitions:
+            if origin.transitions[i].target == startLoop or origin.transitions[i].target == origin:
+                noLastSymbol = True
+
         #State Found
         if origin == target:
             return lastSymbol
         
-        pathWord = ""
         for t in origin.transitions:
             #Does not take empty transitions, cycles, we just want the path 
             if t != "empty" and origin.transitions[t].target not in calledStates: 
-                nextWord = self.findPathAux(origin.transitions[t].target, target, t, calledStates)
+                nextWord = self.findPathAux(origin.transitions[t].target, target, t, calledStates, startLoop)
+
+                if nextWord != "":
+                    if not noLastSymbol: pathWord += lastSymbol + nextWord
+                    else: pathWord += nextWord
+                    break
+                
+        return pathWord
+    
+    #Find which transitions should take to go to one state to another
+    def findPath(self, origin, target, startLoop):
+        return self.findPathAux(origin, target, "", [], startLoop)
+
+    def findFakePathAux(self, origin, target, lastSymbol, calledStates):
+        calledStates.append(origin)
+        pathWord = ""
+
+        #State Found
+        if origin == target:
+            return lastSymbol
+        
+        for t in origin.transitions:
+            #Does not take empty transitions, cycles, we just want the path 
+            if t != "empty" and origin.transitions[t].target not in calledStates: 
+                nextWord = self.findFakePathAux(origin.transitions[t].target, target, t, calledStates)
 
                 if nextWord != "":
                     pathWord += lastSymbol + nextWord
@@ -131,9 +162,8 @@ class automaton():
                 
         return pathWord
     
-    #Find which transitions should take to go to one state to another
-    def findPath(self, origin, target):
-        return self.findPathAux(origin, target, "", [])
+    def findFakePath(self, origin, target):
+        return self.findFakePathAux(origin, target, "", [])
 
     def depth(self):
         return self.depthAux(self.initialState, [])

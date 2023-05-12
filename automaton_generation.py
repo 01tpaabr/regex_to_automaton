@@ -29,15 +29,20 @@ def removeEmpty(automaton) -> automaton:
 
         del(loopFinish.transitions["empty"])
 
-        #Find out which word is built in loop
-        loopWord = automaton.findPath(loopStart, loopFinish)
-
-
+        #Find out which word is built in
+        loopWord = automaton.findPath(loopStart, loopFinish, loopStart)
+        iterationWord = automaton.findFakePath(loopStart, loopFinish) #Path including symbols from other loops
+    
         symbolCount = 0
 
         #If possible, the back transition would need to have the same symbol as the start of the loop
         transitionSymbol = loopWord[symbolCount]
+        
+        #Just first symbol from fakePath
+        if loopWord != iterationWord : loopStart = loopStart.transitions[iterationWord[0]].target
+        
         loopStart = loopStart.transitions[transitionSymbol].target
+
 
         while loopFinish.hasTransition(transitionSymbol):
             #If this state has an transition with the symbol equal to transition symbol, we need to advance one state and try again
@@ -238,36 +243,8 @@ def unionProcess(automatons : list) -> automaton:
     return union
 
 def concat(a, b, finalAStates):
+    pass
   
-
-
-def postProcessPath(pathAutomaton) -> automaton:
-    global count
-    pathAutomaton.showVisualDFA("./a" + str(count) +'.png')
-    count += 1
-    
-    original = copy.deepcopy(pathAutomaton)
-    cycles = pathAutomaton.findPathCycles()
-
-    for i in cycles:
-      finishState = i[1]
-      startState = i[0]
-
-      
-      for j in finishState.transitions:
-        attemptedState = startState
-        attemptedTransition = j
-        targetState = finishState.transitions[j].target
-
-        #Finish
-        if attemptedTransition != "empty":
-          while attemptedTransition in attemptedState.transitions:
-            #Go to next state
-            attemptedState = attemptedState.transitions[j].target
-            if attemptedTransition in targetState.transitions:
-              pass
-
-
 
 
 #No 'or' operator in this regex
@@ -289,54 +266,39 @@ def path(regex : str) -> automaton:
     
     #Notifies number of '(' operations to be handled (i.e add state to 'groupStateStack' line 136) 
     openGroup = 0
+
+    #For other operation
+    openParentheses = 0
+
+    cutOperationsList = []
     
     i = 0
     while i < len(regex):
         realSymbol = regex[i]
-        separatePath = False
+        # separatePath = False
         
         if realSymbol == "(":
             openGroup += 1
-        
-        if separatePath:
-          separatePath = False
-          newStatePath = state(False, {})
-          newPathTransition = transition(newStatePath, realSymbol, lastState)
-
-          #Go to next state and try again
-          while realSymbol in lastState.transitions:
-            lastState = lastState.transitions[realSymbol].target
-            #Advance one symbol as well
-            i += 1
-            realSymbol = regex[i]
-
-          lastState.transitions[realSymbol] = newPathTransition
-          a.transitionsList.append(newPathTransition)
-          
-          lastState = newPathTransition
+            openParentheses += 1
 
         #Handle Group Closure
         if realSymbol == ")":
+            openParentheses += -1
+
             startGroupState = groupStateStack.pop()
             #Not last
             if i < len(regex) - 1:
                 if regex[i + 1] == "*":
-                    startGroupState.final = True
-
                     #Add transition to go back to starting group state
                     backTransition = transition(startGroupState, "empty", lastState)
                     a.transitionsList.append(backTransition)
                     lastState.transitions["empty"] = backTransition
 
-                    #Fix *
-                    separatePath = True
-                    lastPath = startGroupState
-                    
+                    #Reset last state
+                    lastState = startGroupState
 
                     if i + 1 == len(regex) - 1:
                         lastState.final = True
-
-                #"empty" symbol needs to be interpreted in run as using this transition only if there is no other, then it doesn't read any symbol
                 
                 #Exists other symbols
                 if i < len(regex) - 2:
@@ -346,25 +308,28 @@ def path(regex : str) -> automaton:
         if realSymbol not in operators:
             #If there is no more characters left, this is an final state
             newState = state(not (i + 1 < len(regex)), {})
-            
-            newTransition = transition(newState, realSymbol, lastState)
-            a.transitionsList.append(newTransition)
-            lastState.transitions[realSymbol] = newTransition
 
             #Handle '('
             while openGroup:
                 groupStateStack.append(lastState)
                 openGroup += -1
+            
+            #Could happen in case of finished ()*
+            if realSymbol in lastState.transitions:
+                lastState = lastState.transitions[realSymbol].target
+            else:
+                newTransition = transition(newState, realSymbol, lastState)
+                a.transitionsList.append(newTransition)
+                lastState.transitions[realSymbol] = newTransition
+                
+                #Add to automaton list of states
+                a.states.append(newState)
+                a.statesDict[newState.name] = newState
 
-            #Add to automaton list of states
-            a.states.append(newState)
-            a.statesDict[newState.name] = newState
-
-            lastState = newState
+                lastState = newState
         
         i += 1
 
-    postProcessPath(a)
     return a
 
 #This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
@@ -516,6 +481,7 @@ old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(
 testTree = regexTree([], [])
 buildRegexTree(old, testTree)
 testTree.value = old
+testTree.treePrint()
 
 testAutomaton = genFinalAutomaton(testTree)
 removeEmpty(testAutomaton)
