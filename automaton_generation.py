@@ -20,10 +20,24 @@ count = 0
 #Remove last step of non determinism, empty back transitions
 def removeEmpty(automaton) -> automaton:
     emptyTransitions = automaton.symbolTransitions("empty")
+
+    #Group transitions by target
+    transitionsGroups = {}
+
+    #For group operation
+    firstWord = {}
+
+    for t in emptyTransitions:
+        if t.target.name not in transitionsGroups:
+            transitionsGroups[t.target.name] = [t]
+
+        if t not in transitionsGroups[t.target.name] : 
+            transitionsGroups[t.target.name].append(t)    
     
     for t in emptyTransitions:
         automaton.transitionsList.remove(t)
-        
+        currentGroup = transitionsGroups[t.target.name]
+
         loopStart = t.target
         loopFinish = t.origin
 
@@ -43,7 +57,6 @@ def removeEmpty(automaton) -> automaton:
         
         loopStart = loopStart.transitions[transitionSymbol].target
 
-
         while loopFinish.hasTransition(transitionSymbol):
             #If this state has an transition with the symbol equal to transition symbol, we need to advance one state and try again
             loopFinish = loopFinish.transitions[transitionSymbol].target
@@ -58,8 +71,56 @@ def removeEmpty(automaton) -> automaton:
 
         newTransition = transition(loopStart, transitionSymbol, loopFinish)
         loopFinish.transitions[transitionSymbol] = newTransition
-        loopFinish.final = True
+        firstWord[loopFinish] = transitionSymbol
+        # loopFinish.final = True
         automaton.transitionsList.append(newTransition)
+    
+    #Handle * union from transitionGroups
+    for i in transitionsGroups:
+        for a in transitionsGroups[i]:
+            aOrigin = a.origin
+            for b in transitionsGroups[i]:
+                if b != a:
+                    bFinish = b.origin
+                    bStart = b.target
+                    
+                    loopWord = automaton.findPath(bStart, bFinish, bStart)
+                    iterationWord = automaton.findFakePath(bStart, bFinish)
+
+                    symbolCount = 0
+
+                    #If possible, the back transition would need to have the same symbol as the start of the loop
+                    transitionSymbol = loopWord[symbolCount]
+                    
+                    #Just first symbol from fakePath
+                    if loopWord != iterationWord : bStart  = bStart.transitions[iterationWord[0]].target
+                    
+                    bStart = bStart.transitions[transitionSymbol].target
+                    
+                    if transitionSymbol in aOrigin.transitions:
+                        if aOrigin.transitions[transitionSymbol].target == bStart:
+                            break
+
+                    while aOrigin.hasTransition(transitionSymbol):
+                        #If this state has an transition with the symbol equal to transition symbol, we need to advance one state and try again
+                        aOrigin = aOrigin.transitions[transitionSymbol].target
+
+                        #Same for the transitionSymbol
+                        symbolCount += 1
+                        if symbolCount == len(loopWord): symbolCount = 0
+                        transitionSymbol = loopWord[symbolCount]
+
+                        #Loop start will advance aswell
+                        bStart = bStart.transitions[loopWord[symbolCount]].target
+                    
+                    newTransition = transition(bStart, transitionSymbol, aOrigin)
+                    aOrigin.transitions[transitionSymbol] = newTransition
+                    firstWord[loopFinish] = transitionSymbol
+                    automaton.transitionsList.append(newTransition)
+
+
+                
+                
     
     return automaton
 
@@ -486,7 +547,7 @@ testTree.treePrint()
 testAutomaton = genFinalAutomaton(testTree)
 removeEmpty(testAutomaton)
 
-testAutomaton.showVisualDFA("./test.png")
+testAutomaton.showVisualDFA("./NewTest.png")
 
 #Consertar união (problema "x a")
 #Modificar *
