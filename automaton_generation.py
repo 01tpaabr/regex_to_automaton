@@ -430,6 +430,7 @@ def buildRegexTree(regex : str, currNode : regexTree):
 
         nextLevel.append(currentWord)
 
+
         for i in nextLevel:
             if len(i) != 0: 
                 if i[len(i)-1] == "*":
@@ -466,7 +467,14 @@ def buildRegexTree(regex : str, currNode : regexTree):
                     currNode.value.append(i)
                     currNode.children.append(newTree)
 
+
                 buildRegexTree(i, newTree)
+    
+    #Fix treePrint visualization
+    if len(currNode.children) > 0:
+        if len(currNode.value) > 0:
+            currNode.children[0].value = currNode.value[0]
+
 
 def applyStar(a : automaton) -> automaton:
     finalStates = a.findLastStates(a.initialState, [])

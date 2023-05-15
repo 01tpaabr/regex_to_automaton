@@ -287,6 +287,9 @@ class regexTree():
     #just for print
     diferentiator = "'"
 
+    def __repr__(self) -> str:
+        return "Node (" + str(self.value) +  ")"
+
     def __init__(self, children, value) -> None:
         self.children = children
         self.value = value
@@ -294,7 +297,6 @@ class regexTree():
     def buildTree(self, tree, currNode, calledNodes):
         calledNodes.append(currNode)
 
-        
         for n in currNode.children:
             nextNode = n
             if nextNode.value != []:
