@@ -291,7 +291,7 @@ class regexTree():
     children : list = None
 
     #just for print
-    diferentiator = 1
+    diferentiator = "'"
 
     def __repr__(self) -> str:
         return "Node (" + str(self.value) +  ")"
@@ -300,7 +300,7 @@ class regexTree():
         self.children = children
         self.value = value
     
-    def buildTree(self, tree, currNode, calledNodes):
+    def buildTree(self, tree, currNode, calledNodes, usedValues):
         calledNodes.append(currNode)
         
         for n in currNode.children:
@@ -309,14 +309,20 @@ class regexTree():
                 if nextNode not in calledNodes:
                     if nextNode.value == "|": 
                         nextNode.value += str(regexTree.diferentiator)
-                        regexTree.diferentiator += 1
+                        regexTree.diferentiator += "'"
 
                     if nextNode.value == "*": 
                         nextNode.value += str(regexTree.diferentiator)
-                        regexTree.diferentiator += 1
+                        regexTree.diferentiator += "'"
+
+                    # if str(nextNode.value) in usedValues:
+                    #     nextNode.value += str(regexTree.diferentiator)
+                    #     regexTree.diferentiator += "'"
+
+                    # usedValues.append(str(nextNode.value))
 
                     tree.create_node(str(nextNode.value), str(nextNode.value), parent=str(currNode.value))
-                    self.buildTree(tree, nextNode, calledNodes)
+                    self.buildTree(tree, nextNode, calledNodes, usedValues)
 
 
     def treePrint(self):
@@ -325,7 +331,7 @@ class regexTree():
 
         tree.create_node(str(self.value), str(self.value))
 
-        self.buildTree(tree, self, [])
+        self.buildTree(tree, self, [], [])
 
         tree.show()
 

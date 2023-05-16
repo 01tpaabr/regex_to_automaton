@@ -55,11 +55,7 @@ def simplify(regex: str) -> str:
                 return False
             #Go to end of sequence
             i += 4
-            print(i)
             
         i += 1 
 
     return result
-
-test = "([a-z][A-Z])*"
-print(simplify(test))

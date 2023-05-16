@@ -204,8 +204,6 @@ def unionProcess(automatons : list) -> automaton:
 
                 originalStateNameForCurrentSymbol = currentSymbols[j][len(currentSymbols[j]) - 1]
                 
-
-
                 for k in pathsList:
                     if k.name == originalStateNameForCurrentSymbol: originalStateForCurrentSymbol = k
                 
@@ -221,7 +219,8 @@ def unionProcess(automatons : list) -> automaton:
                             emptyTransitionTarget = allReferences[currentTransition.target.name]
                             newTransition = transition(emptyTransitionTarget, "empty", initUnionState)
                             initUnionState.transitions["empty"] = newTransition
-                            union.transitionsList.append(newTransition)
+                            if newTransition not in union.transitionsList: 
+                                union.transitionsList.append(newTransition)
                         else:
                             if(currentSymbol not in chosenSymbols["init"]):
                                 chosenSymbols["init"].append(currentSymbol)
@@ -231,7 +230,8 @@ def unionProcess(automatons : list) -> automaton:
 
                                 createdStates.append(newState)
                                 createdTransitions.append(newTransition)
-                                union.transitionsList.append(newTransition)
+                                if newTransition not in union.transitionsList: 
+                                    union.transitionsList.append(newTransition)
                                 
                                 initUnionState.transitions[currentSymbol] = newTransition
                                
@@ -258,7 +258,8 @@ def unionProcess(automatons : list) -> automaton:
                             emptyTransitionTarget = allReferences[currentTransition.target.name]
                             newTransition = transition(emptyTransitionTarget, "empty", transitionParentState)
                             transitionParentState.transitions["empty"] = newTransition
-                            union.transitionsList.append(newTransition)
+                            if newTransition not in union.transitionsList: 
+                                union.transitionsList.append(newTransition)
                         else: #Same logic as first iteration (remove separation later)
                             if(currentSymbol not in chosenSymbols[transitionParentState.name]):
                                 chosenSymbols[transitionParentState.name].append(currentSymbol)
@@ -268,7 +269,8 @@ def unionProcess(automatons : list) -> automaton:
                                 
                                 createdStates.append(newState)
                                 createdTransitions.append(newTransition)
-                                union.transitionsList.append(newTransition)
+                                if newTransition not in union.transitionsList: 
+                                    union.transitionsList.append(newTransition)
 
                                 transitionParentState.transitions[currentSymbol] = newTransition
 
@@ -298,46 +300,42 @@ def unionProcess(automatons : list) -> automaton:
             union.states.append(s)
         
         for t in createdTransitions:
-            union.transitionsList.append(t)
+            if newTransition not in union.transitionsList: 
+                union.transitionsList.append(t)
     
     return union
 
 
-def handleRepeatedTransition(t, aOrigin, bTarget, a, b, automatonMap):
+def handleRepeatedTransition(t, aOrigin, bTarget, a, b, automatonMap, calledStates):
     symbol = t.symbol
-    # aOrigin = map[transition.origin.name]
-    # bTarget = transition.target
-    print(aOrigin)
-    print(symbol)
-    print(bTarget)
-    print()
-
+    calledStates.append(aOrigin)
     if symbol not in aOrigin.transitions:
         newTransition = transition(automatonMap[bTarget.name], symbol, aOrigin)
         aOrigin.transitions[symbol] = newTransition
-        a.transitionsList.append(newTransition)
+        if newTransition not in a.transitionsList: 
+            a.transitionsList.append(newTransition)
     else:
         #Advance each state using this symbol
-        aOrigin = aOrigin.transitions[symbol].target
+        if aOrigin not in calledStates:
+            aOrigin = aOrigin.transitions[symbol].target
 
-        if len(list(bTarget.transitions)) != 0:
-            #Repeat process for new transitions
-            for t in bTarget.transitions:
-                currTransition = bTarget.transitions[t]
-                bTarget = automatonMap[currTransition.target.name]
-                handleRepeatedTransition(currTransition, aOrigin, bTarget, a, b, automatonMap)
+            if len(list(bTarget.transitions)) != 0:
+                #Repeat process for new transitions
+                for t in bTarget.transitions:
+                    currTransition = bTarget.transitions[t]
+                    bTarget = automatonMap[currTransition.target.name]
+                    handleRepeatedTransition(currTransition, aOrigin, bTarget, a, b, automatonMap, calledStates)
 
 
 def concat(a, b, finalAStates):
-    global count
-    
-    a.showVisualDFA("./concat" + str(count) + ".png")
-    b.showVisualDFA("./concat_" + str(count) + ".png")
-    count += 1
-
     startBState = b.initialState
+    a.showVisualDFA("./a.png")
+    b.showVisualDFA("./b.png")
+
 
     for i in finalAStates:
+        print(i)
+        i.final = i.final and startBState.final
         #First step is to build, b from each finalStateFromA
         mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
         mapBToConcat[startBState.name] = i
@@ -364,21 +362,24 @@ def concat(a, b, finalAStates):
                 mapBToConcat[oldTarget.name] = newState
                 mapBToConcat[newState.name] = newState
                 a.states.append(newState)
-            
+
             newOrigin = mapBToConcat[oldOrigin.name]
             newTarget = mapBToConcat[oldTarget.name]
-
+            
+            
             if currSymbol in newOrigin.transitions: #Handle later
                 repeatedTransitions.append(oldTransition)
             else:
                 #For transitions we don't need to create new ones
                 newTransition = transition(newTarget, currSymbol, newOrigin)
                 newOrigin.transitions[currSymbol] = newTransition
-                a.transitionsList.append(newTransition)
-        
+
+                if newTransition not in a.transitionsList: 
+                    a.transitionsList.append(newTransition)
+
         #Now handle repeated transitions
         for i in repeatedTransitions:
-            handleRepeatedTransition(i, mapBToConcat[i.origin.name], i.target, a, b, mapBToConcat)
+            handleRepeatedTransition(i, mapBToConcat[i.origin.name], i.target, a, b, mapBToConcat, [])
 
     return a
 
@@ -677,23 +678,27 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
     #Basic case, found leaf
     return path(regexTree.value)
 
-test = "(((a)|(b))(cd))" #Criar função que falta, (concatenação)
-old = "(((abd(ac c)*)(a)*)|((bb((bc)*aa)*)(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
+test = "(((a)|(b))(cd))"
+old = "(((abd(ac c)*)(ab)*)|((bb((bc)*aa)*)(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
-testTree = regexTree([], [])
-buildRegexTree(old, testTree)
-testTree.value = old
-testTree.treePrint()
+# testTree = regexTree([], [])
+# buildRegexTree(old, testTree)
+# testTree.value = old
+# testTree.treePrint()
 
-testAutomaton = genFinalAutomaton(testTree)
-testAutomaton.showVisualDFA("./test2.png")
+# testAutomaton = genFinalAutomaton(testTree)
+# removeEmpty(testAutomaton)
 
-removeEmpty(testAutomaton)
-
-testAutomaton.showVisualDFA("./NewTest.png")
+# testAutomaton.showVisualDFA("./test.png")
 
 #Problematico em casos de (()*)* ex: (bb((bc)*aa)*ad), (abd(ac c)*(a)*), por conta da ordem dos ()*, no momento esta tratando (ac c)*|(a)* como (ac c)*(a)*
 
+#Scanner mini C
+#tokens: ['<=', 'if', '<', '{', '-', ')', '(', 'identifier', 'for', ',', 'float', '*', 
+# '+', '!=', '>=', '=', 'int', 'number', '}', '>', ';', 'while', 'else', '\\n', '/', '==']
 
+simpleTokenList = [
+    '<=', 'if', '<', '{', '-', 'for', ',', '+', '!=', '>=', '=', 'int', '}', '>', ';', 'while', 'else', '/', '=='
+]
 
-
+#Others : ['(', ')', 'identifier', 'float', 'number', '\', ]
