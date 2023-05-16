@@ -425,9 +425,7 @@ def path(regex : str) -> automaton:
                 lastState = newState
         
         i += 1
-    global count
-    a.showVisualDFA("./a" + str(count) + ".png")
-    count += 1
+    
     return a
 
 #This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
@@ -494,7 +492,8 @@ def buildRegexTree(regex : str, currNode : regexTree):
             while i < len(nextLevel):
                 nextLevel[i] = nextLevel[i][1:]
                 i += 1    
-               
+            
+            currNode.children.append(newUnionTree)
 
         for i in nextLevel:
             if len(i) != 0: 
@@ -528,9 +527,7 @@ def buildRegexTree(regex : str, currNode : regexTree):
                         newTree = regexTree([], [])
                         currNode.children.append(newTree)
                 else:
-                    if nextIsUnion:
-                        currNode.children.append(newUnionTree)
-                        
+                    if nextIsUnion:                        
                         newTree = regexTree([], [])
                         currNode.value.append(i)
                         newUnionTree.children.append(newTree)
@@ -576,38 +573,44 @@ def applyStar(a : automaton) -> automaton:
     return a
 
 def genFinalAutomaton(regexTree : regexTree) -> automaton:
+    # print(regexTree)
+    # print(regexTree.children)
+    # print()
     #The automaton will be built from botton up, following these rules:
     #Leaves of this tree will contain regex, that need to be given to 'path' function
     #An parent node will be formed by the union of his children, by using their automaton as input to 'unionProcess' function
-    #An parent node with '*' value will have only one child and informs that it need's to be applied an ()* operation in his child automaton
-    
+    #An parent node with '*' value will have only one child and informs that it need's to be applied an ()* operation in his child automaton    
     if len(regexTree.children) > 1 :
-        if regexTree.children[1].value[0] == '|':
-            unionList = []
+        concatList = []
 
-            for i in regexTree.children:
-                unionList.append(genFinalAutomaton(i.children[0]))
-            
-            unionResult = unionProcess(unionList)
-            
-            
-            return unionResult
-        else:
-            concatList = []
+        for i in regexTree.children:
+            concatList.append(genFinalAutomaton(i))
 
-            for i in regexTree.children:
-                concatList.append(genFinalAutomaton(i))
+        concatResult = concatList[0]
+        
+        i = 1
+        while i < len(concatList):
+            concatResult = concat(concatResult, concatList[i], concatList[i].findLastStates(concatResult.initialState, []))
+            i += 1
 
-            concatResult = concatList[0]
-            
-            i = 1
-            while i < len(concatList):
-                concatResult = concat(concatResult, concatList[i], concatList[i].findLastStates(concatResult.initialState, []))
-                i += 1
-
-            return concatResult
+        return concatResult
     
     if len(regexTree.children) > 0:
+        if regexTree.children[0].value[0] == '|':
+            regexTree = regexTree.children[0]
+            unionList = []
+            
+            for i in regexTree.children:
+                unionList.append(genFinalAutomaton(i))
+
+            print(unionList)
+            
+
+            
+            unionResult = unionProcess(unionList)
+        
+            return unionResult
+        
         if regexTree.children[0].value[0] == "*":
             #Go down to asterisc level
             regexTree = regexTree.children[0]
@@ -630,7 +633,7 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
     return path(regexTree.value)
 
 test = "(((a)|(b))(cd))" #Criar função que falta, (concatenação)
-old = "((abd(ac c)*(a)*)|((bb((bc)*aa)*)(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
+old = "(((abd(ac c)*)(a)*)|((bb((bc)*aa)*)(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
 testTree = regexTree([], [])
 buildRegexTree(old, testTree)
