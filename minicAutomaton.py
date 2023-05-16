@@ -20,13 +20,13 @@ simpleTokenList = [
 
 otherTokenList = []
 
-number = simplifyRegex.simplify("([0-9][0-9]*)")
+number = simplifyRegex.simplify("([0-9]([0-9]*))")
 otherTokenList.append(number)
 
 identifier = simplifyRegex.simplify("(([a-z]|[A-Z])(([a-z]|[A-Z]|[0-9])*))")
 otherTokenList.append(identifier)
 
-float = simplifyRegex.simplify("([0-9]([0-9]*))")
+float = simplifyRegex.simplify("([0-9]([0-9]*)(.)([0-9]*))")
 otherTokenList.append(float)
 
 test = [float]

@@ -133,9 +133,7 @@ def removeEmpty(automaton) -> automaton:
 def minimizeUnion(union):
     initState = union.initialState
 
-    for i in union.states:
-        if i != initState:
-            union.states.remove(i)
+    union.states = [initState]
     
     newState = state(True, {})
 
@@ -145,9 +143,8 @@ def minimizeUnion(union):
         else:
             t.target = newState
 
-    
     union.states.append(newState)
-    
+
     return union
 
 #Aux function to find out which last state this transition needs to be handled in (just for union purposes)
@@ -355,10 +352,12 @@ def handleRepeatedTransition(t, aOrigin, bTarget, a, b, automatonMap, calledStat
                     handleRepeatedTransition(currTransition, aOrigin, bTarget, a, b, automatonMap, calledStates)
 
 
-def concat(a, b, finalAStates):
+def concat(a, b):
     startBState = b.initialState
     
     mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
+
+    finalAStates = a.finalStates()
 
     for i in finalAStates:
         i.final = i.final and startBState.final
@@ -392,7 +391,6 @@ def concat(a, b, finalAStates):
             newOrigin = mapBToConcat[oldOrigin.name]
             newTarget = mapBToConcat[oldTarget.name]
             
-            
             if currSymbol in newOrigin.transitions: #Handle later
                 repeatedTransitions.append(oldTransition)
             else:
@@ -407,6 +405,7 @@ def concat(a, b, finalAStates):
         for i in repeatedTransitions:
             handleRepeatedTransition(i, mapBToConcat[i.origin.name], i.target, a, b, mapBToConcat, [])
 
+    
     return a
 
             
@@ -658,9 +657,11 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
 
         concatResult = concatList[0]
         
+        
         i = 1
         while i < len(concatList):
-            concatResult = concat(concatResult, concatList[i], concatList[i-1].finalStates())
+            concatResult = concat(concatResult, concatList[i])
+            
             i += 1
 
         return concatResult
