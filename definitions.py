@@ -279,6 +279,12 @@ class automaton():
         
         nfa = NFA(states=results[0], input_symbols=results[3], transitions=results[2], initial_state=self.initialState.name, final_states=results[1])
         nfa.show_diagram(path)
+
+    def finalStates(self):
+        finalStates = []
+        for i in self.states:
+            if i.final: finalStates.append(i)
+        return finalStates
         
 class regexTree():
     value = None

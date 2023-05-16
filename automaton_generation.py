@@ -303,44 +303,83 @@ def unionProcess(automatons : list) -> automaton:
     return union
 
 
-def handleRepeatedTransition(transition, aState, bState):
-    symbol = transition.symbol
+def handleRepeatedTransition(t, aOrigin, bTarget, a, b, automatonMap):
+    symbol = t.symbol
+    # aOrigin = map[transition.origin.name]
+    # bTarget = transition.target
+    print(aOrigin)
+    print(symbol)
+    print(bTarget)
+    print()
 
-    if symbol in aState.transitions:
-        aState = aState.transitions[symbol].target
-        bState = bState.transitions[symbol].target
+    if symbol not in aOrigin.transitions:
+        newTransition = transition(automatonMap[bTarget.name], symbol, aOrigin)
+        aOrigin.transitions[symbol] = newTransition
+        a.transitionsList.append(newTransition)
+    else:
+        #Advance each state using this symbol
+        aOrigin = aOrigin.transitions[symbol].target
 
-        if len(list(bState.transitions)) > 0:
-            for i in bState.transitions:
-                handleRepeatedTransition(i, aState, bState)
-        else:
-            aState.final = aState.final and bState.final
-    
-    transition.origin = aState
-    aState.transitions[symbol] = transition
+        if len(list(bTarget.transitions)) != 0:
+            #Repeat process for new transitions
+            for t in bTarget.transitions:
+                currTransition = bTarget.transitions[t]
+                bTarget = automatonMap[currTransition.target.name]
+                handleRepeatedTransition(currTransition, aOrigin, bTarget, a, b, automatonMap)
+
 
 def concat(a, b, finalAStates):
-    for i in finalAStates:
-        currAFinalState = i
-        bCopy = copy.deepcopy(b)
-        bStartState = bCopy.initialState
-
-        i.final = i.final and bStartState.final
-
-        #All transitions for initial state in B, copy to A
-        for j in bStartState.transitions:
-            currBTransition = bStartState.transitions[j]
-
-            if j in i.transitions:
-                handleRepeatedTransition(currBTransition, currAFinalState, bStartState)
-            else:
-                currBTransition.origin = currAFinalState
-                currAFinalState.transitions[j] = currBTransition
-                a.states.append(currBTransition.target)
-
-    for j in bCopy.transitionsList:
-        a.transitionsList.append(j)
+    global count
     
+    a.showVisualDFA("./concat" + str(count) + ".png")
+    b.showVisualDFA("./concat_" + str(count) + ".png")
+    count += 1
+
+    startBState = b.initialState
+
+    for i in finalAStates:
+        #First step is to build, b from each finalStateFromA
+        mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
+        mapBToConcat[startBState.name] = i
+        #Add first state from A aswell
+        mapBToConcat[i.name] = i
+        repeatedTransitions = []
+
+        #Build from transitionsList
+        for t in b.transitionsList:
+            oldTransition = t
+            currSymbol = oldTransition.symbol
+            oldOrigin = oldTransition.origin
+            oldTarget = oldTransition.target
+            
+            #For states we need to create new ones, because of name identifiers
+            if oldOrigin.name not in mapBToConcat:
+                newState = state(oldOrigin.final, {})
+                mapBToConcat[oldOrigin.name] = newState
+                mapBToConcat[newState.name] = newState
+                a.states.append(newState)
+            
+            if oldTarget.name not in mapBToConcat:
+                newState = state(oldTarget.final, {})
+                mapBToConcat[oldTarget.name] = newState
+                mapBToConcat[newState.name] = newState
+                a.states.append(newState)
+            
+            newOrigin = mapBToConcat[oldOrigin.name]
+            newTarget = mapBToConcat[oldTarget.name]
+
+            if currSymbol in newOrigin.transitions: #Handle later
+                repeatedTransitions.append(oldTransition)
+            else:
+                #For transitions we don't need to create new ones
+                newTransition = transition(newTarget, currSymbol, newOrigin)
+                newOrigin.transitions[currSymbol] = newTransition
+                a.transitionsList.append(newTransition)
+        
+        #Now handle repeated transitions
+        for i in repeatedTransitions:
+            handleRepeatedTransition(i, mapBToConcat[i.origin.name], i.target, a, b, mapBToConcat)
+
     return a
 
             
@@ -573,13 +612,24 @@ def applyStar(a : automaton) -> automaton:
     return a
 
 def genFinalAutomaton(regexTree : regexTree) -> automaton:
-    # print(regexTree)
-    # print(regexTree.children)
-    # print()
     #The automaton will be built from botton up, following these rules:
     #Leaves of this tree will contain regex, that need to be given to 'path' function
     #An parent node will be formed by the union of his children, by using their automaton as input to 'unionProcess' function
     #An parent node with '*' value will have only one child and informs that it need's to be applied an ()* operation in his child automaton    
+    if len(regexTree.value) > 0:
+        if regexTree.value[0] == "*":
+            if len(regexTree.children[0].value) > 1:
+                child = genFinalAutomaton(regexTree.children[0])
+
+                asteriscResult = applyStar(child)
+
+            else:
+                asteriscResult = applyStar(genFinalAutomaton(regexTree.children[0]))
+            
+            return asteriscResult
+
+    
+    
     if len(regexTree.children) > 1 :
         concatList = []
 
@@ -590,7 +640,7 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
         
         i = 1
         while i < len(concatList):
-            concatResult = concat(concatResult, concatList[i], concatList[i].findLastStates(concatResult.initialState, []))
+            concatResult = concat(concatResult, concatList[i], concatList[i-1].finalStates())
             i += 1
 
         return concatResult
@@ -603,10 +653,6 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
             for i in regexTree.children:
                 unionList.append(genFinalAutomaton(i))
 
-            print(unionList)
-            
-
-            
             unionResult = unionProcess(unionList)
         
             return unionResult
@@ -614,7 +660,6 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
         if regexTree.children[0].value[0] == "*":
             #Go down to asterisc level
             regexTree = regexTree.children[0]
-            
             if len(regexTree.children[0].value) > 1:
                 child = genFinalAutomaton(regexTree.children[0])
 
