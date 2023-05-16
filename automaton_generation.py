@@ -45,11 +45,13 @@ def removeEmpty(automaton) -> automaton:
 
         #[a-z] minimized cases
         if len(loopStart.transitions) > 1:
+            ignoreList = ['.', ' '] #gambiarra
             for t in loopStart.transitions:
-                currTransition = loopStart.transitions[t]
-                newTransition = transition(currTransition.origin, currTransition.symbol, currTransition.target)
-                currTransition.target.transitions[t] = newTransition
-                automaton.transitionsList.append(newTransition)
+                if t not in ignoreList:
+                    currTransition = loopStart.transitions[t]
+                    newTransition = transition(currTransition.origin, currTransition.symbol, currTransition.target)
+                    currTransition.target.transitions[t] = newTransition
+                    automaton.transitionsList.append(newTransition)
             
             continue
 

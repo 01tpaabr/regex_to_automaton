@@ -20,28 +20,32 @@ simpleTokenList = [
 
 otherTokenList = []
 
-number = simplifyRegex.simplify("([0-9]([0-9]*))")
+number = simplifyRegex.simplify("([0-9]([0-9]*)( ))")
 otherTokenList.append(number)
 
 identifier = simplifyRegex.simplify("(([a-z]|[A-Z])(([a-z]|[A-Z]|[0-9])*))")
 otherTokenList.append(identifier)
 
-float = simplifyRegex.simplify("([0-9]([0-9]*)(.)([0-9]*))")
+float = simplifyRegex.simplify("([0-9]([0-9]*)(.)([0-9]*)( ))")
 otherTokenList.append(float)
 
-test = [float]
+basicAutomatonsList = []
 
 count = 0
-for i in test:
+for i in otherTokenList:
     newRegexTree = regexTree([], [])
     automaton_generation.buildRegexTree(i, newRegexTree)
     newRegexTree.value = i
 
     a = automaton_generation.genFinalAutomaton(newRegexTree)
-    a.showVisualDFA("./empty" + str(count) + ".png")
-
-    automaton_generation.removeEmpty(a)
+    a.showVisualDFA("./basic" + str(count) + ".png")
     
-    a.showVisualDFA("./test" + str(count) + ".png")
+    basicAutomatonsList.append(a)
+
     count += 1
+
+lastUnion = automaton_generation.unionProcess(basicAutomatonsList)
+lastUnion.showVisualDFA("./empty.png")
+# automaton_generation.removeEmpty(lastUnion)
+# lastUnion.showVisualDFA("./minic.png")
 
