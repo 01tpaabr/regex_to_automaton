@@ -300,14 +300,53 @@ def unionProcess(automatons : list) -> automaton:
         for t in createdTransitions:
             union.transitionsList.append(t)
     
-    union.showVisualDFA("./test2.png")
     return union
 
+
+def handleRepeatedTransition(transition, aState, bState):
+    symbol = transition.symbol
+
+    if symbol in aState.transitions:
+        aState = aState.transitions[symbol].target
+        bState = bState.transitions[symbol].target
+
+        if len(list(bState.transitions)) > 0:
+            for i in bState.transitions:
+                handleRepeatedTransition(i, aState, bState)
+        else:
+            aState.final = aState.final and bState.final
+    
+    transition.origin = aState
+    aState.transitions[symbol] = transition
+
 def concat(a, b, finalAStates):
-    pass
-  
+    print(finalAStates)
+    for i in finalAStates:
+        currAFinalState = i
+        bCopy = copy.deepcopy(b)
+        bStartState = bCopy.initialState
 
+        i.final = i.final and bStartState.final
 
+        #All transitions for initial state in B, copy to A
+        for j in bStartState.transitions:
+            currBTransition = bStartState.transitions[j]
+
+            if j in i.transitions:
+                handleRepeatedTransition(currBTransition, currAFinalState, bStartState)
+            else:
+                print(currBTransition)
+                currBTransition.origin = currAFinalState
+                currAFinalState.transitions[j] = currBTransition
+                print(currBTransition)
+                a.states.append(currBTransition.target)
+
+    for j in bCopy.transitionsList:
+        a.transitionsList.append(j)
+    
+    return a
+
+            
 #No 'or' operator in this regex
 #Ex of input (abcd(a(b)*c)*)
 def path(regex : str) -> automaton:
@@ -345,7 +384,6 @@ def path(regex : str) -> automaton:
         #Handle Group Closure
         if realSymbol == ")":
             openParentheses += -1
-
             startGroupState = groupStateStack.pop()
             #Not last
             if i < len(regex) - 1:
@@ -390,13 +428,26 @@ def path(regex : str) -> automaton:
                 lastState = newState
         
         i += 1
-
+    global count
+    a.showVisualDFA("./a" + str(count) + ".png")
+    count += 1
     return a
 
 #This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
 def buildRegexTree(regex : str, currNode : regexTree):
     if regex[0] != "(":
-        currNode.value = regex
+        if regex[0] == '|':
+            regexCut = regex[1:]
+            currNode.value = "|"
+            newTree = regexTree([], [regexCut])
+            currNode.children.append(newTree)
+
+            currNode = newTree
+            newTree = regexTree([], [])
+            currNode.children.append(newTree)
+            buildRegexTree(regexCut, newTree)
+        else:
+            currNode.value = regex
     else:
 
         #Remove parentheses
@@ -415,20 +466,24 @@ def buildRegexTree(regex : str, currNode : regexTree):
 
             if currentChar == "(": openParentheses += 1
 
-            if currentChar == ")": openParentheses += -1
-            
-            #Found next level reg exp
-            if currentChar == "|" and openParentheses == 0:
-                nextLevel.append(currentWord)
-                currentWord = ""
-                i += 1
-                continue
+            if currentChar == ")": 
+                openParentheses += -1
+                if openParentheses == 0:
+                    currentWord += currentChar
+                    if i + 1 < len(regex):
+                        if regex[i + 1] == '*':
+                            i += 1
+                            currentWord += regex[i]
+                    nextLevel.append(currentWord)
+                    currentWord = ""
+                    i += 1
+                    continue    
 
             currentWord += currentChar
 
             i += 1
 
-        nextLevel.append(currentWord)
+        if currentWord != "": nextLevel.append(currentWord)
 
 
         for i in nextLevel:
@@ -473,7 +528,8 @@ def buildRegexTree(regex : str, currNode : regexTree):
     #Fix treePrint visualization
     if len(currNode.children) > 0:
         if len(currNode.value) > 0:
-            currNode.children[0].value = currNode.value[0]
+            if currNode.children[0].value == '*':
+                currNode.children[0].value = currNode.value[0]
 
 
 def applyStar(a : automaton) -> automaton:
@@ -514,38 +570,57 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
     #Leaves of this tree will contain regex, that need to be given to 'path' function
     #An parent node will be formed by the union of his children, by using their automaton as input to 'unionProcess' function
     #An parent node with '*' value will have only one child and informs that it need's to be applied an ()* operation in his child automaton
-    unionList = []
-
-    if len(regexTree.children) > 1 :
-
-        for i in regexTree.children:
-            unionList.append(genFinalAutomaton(i))
-        
-        unionResult = unionProcess(unionList)
-        
-        return unionResult
     
+    if len(regexTree.children) > 1 :
+        if regexTree.children[1].value[0] == '|':
+            unionList = []
 
-    if regexTree.children[0].value[0] == "*":
-        #Go down to asterisc level
-        regexTree = regexTree.children[0]
-        
-        if len(regexTree.children[0].value) > 1:
-            child = genFinalAutomaton(regexTree.children[0])
-
-            asteriscResult = applyStar(child)
-
+            for i in regexTree.children:
+                unionList.append(genFinalAutomaton(i.children[0]))
+            
+            unionResult = unionProcess(unionList)
+            
+            
+            return unionResult
         else:
-            asteriscResult = applyStar(genFinalAutomaton(regexTree.children[0]))
+            concatList = []
+
+            for i in regexTree.children:
+                concatList.append(genFinalAutomaton(i))
+
+            concatResult = concatList[0]
+            
+            i = 1
+            while i < len(concatList):
+                concatResult = concat(concatResult, concatList[i], concatList[i].findLastStates(concatResult.initialState, []))
+                i += 1
+
+            return concatResult
+    
+    if len(regexTree.children) > 0:
+        if regexTree.children[0].value[0] == "*":
+            #Go down to asterisc level
+            regexTree = regexTree.children[0]
+            
+            if len(regexTree.children[0].value) > 1:
+                child = genFinalAutomaton(regexTree.children[0])
+
+                asteriscResult = applyStar(child)
+
+            else:
+                asteriscResult = applyStar(genFinalAutomaton(regexTree.children[0]))
+            
+            return asteriscResult
         
-        return asteriscResult
+        #Basic case, found leaf
+        return path(regexTree.children[0].value)
         
     
     #Basic case, found leaf
-    return path(regexTree.children[0].value)
+    return path(regexTree.value)
 
 test = "(((a)|(b))(cd))" #Criar função que falta, (concatenação)
-old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*ad)|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
+old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
 testTree = regexTree([], [])
 buildRegexTree(old, testTree)
@@ -553,14 +628,13 @@ testTree.value = old
 testTree.treePrint()
 
 testAutomaton = genFinalAutomaton(testTree)
+testAutomaton.showVisualDFA("./test2.png")
+
 removeEmpty(testAutomaton)
 
 testAutomaton.showVisualDFA("./NewTest.png")
 
-#Consertar união (problema "x a")
-#Modificar *
-#Modificar união *
-
+#Problematico em casos de (()*)* ex: (bb((bc)*aa)*ad), (abd(ac c)*(a)*), por conta da ordem dos ()*, no momento esta tratando (ac c)*|(a)* como (ac c)*(a)*
 
 
 
