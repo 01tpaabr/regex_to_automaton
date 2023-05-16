@@ -320,7 +320,6 @@ def handleRepeatedTransition(transition, aState, bState):
     aState.transitions[symbol] = transition
 
 def concat(a, b, finalAStates):
-    print(finalAStates)
     for i in finalAStates:
         currAFinalState = i
         bCopy = copy.deepcopy(b)
@@ -335,10 +334,8 @@ def concat(a, b, finalAStates):
             if j in i.transitions:
                 handleRepeatedTransition(currBTransition, currAFinalState, bStartState)
             else:
-                print(currBTransition)
                 currBTransition.origin = currAFinalState
                 currAFinalState.transitions[j] = currBTransition
-                print(currBTransition)
                 a.states.append(currBTransition.target)
 
     for j in bCopy.transitionsList:
@@ -436,20 +433,8 @@ def path(regex : str) -> automaton:
 #This function will build an tree informing which operations and in which onder we need to do, to construct the automaton
 def buildRegexTree(regex : str, currNode : regexTree):
     if regex[0] != "(":
-        if regex[0] == '|':
-            regexCut = regex[1:]
-            currNode.value = "|"
-            newTree = regexTree([], [regexCut])
-            currNode.children.append(newTree)
-
-            currNode = newTree
-            newTree = regexTree([], [])
-            currNode.children.append(newTree)
-            buildRegexTree(regexCut, newTree)
-        else:
-            currNode.value = regex
+        currNode.value = regex
     else:
-
         #Remove parentheses
         regex = regex[1:-1]
 
@@ -469,15 +454,24 @@ def buildRegexTree(regex : str, currNode : regexTree):
             if currentChar == ")": 
                 openParentheses += -1
                 if openParentheses == 0:
-                    currentWord += currentChar
+                    currentWord += ")"
+
                     if i + 1 < len(regex):
-                        if regex[i + 1] == '*':
+                        if regex[i + 1] == "*":
+                            currentWord += '*'
                             i += 1
-                            currentWord += regex[i]
+
                     nextLevel.append(currentWord)
                     currentWord = ""
                     i += 1
-                    continue    
+                    continue
+            
+            # #Found next level reg exp
+            # if currentChar == "|" and openParentheses == 0:
+            #     nextLevel.append(currentWord)
+            #     currentWord = ""
+            #     i += 1
+            #     continue
 
             currentWord += currentChar
 
@@ -485,22 +479,38 @@ def buildRegexTree(regex : str, currNode : regexTree):
 
         if currentWord != "": nextLevel.append(currentWord)
 
+        #Pre process for union operation
+        nextIsUnion = False
+
+        if len(nextLevel) > 1:
+            if nextLevel[1][0] == "|":
+                nextIsUnion = True
+
+        newUnionTree = regexTree([], "|")
+
+        if nextIsUnion:
+            #Remove '|'
+            i = 1
+            while i < len(nextLevel):
+                nextLevel[i] = nextLevel[i][1:]
+                i += 1    
+               
 
         for i in nextLevel:
             if len(i) != 0: 
+                #We need to check if this * need's to be removed for next level of regex tree (diferentiate these two types of regex)
+                #Ex: needs to be removed: ((ghi)*) / doesn't need to be removed (abd(acc)*(a)*)
+                #Going to do this by counting parentheses, if parentheses count equals 0 more than one two times
+                zeroCounts = 0
+                auxParenthesesCount = 0
+
+                for j in range(len(i)):
+                    if i[j] == "(": auxParenthesesCount += 1
+                    if i[j] == ")": auxParenthesesCount += -1
+
+                    if auxParenthesesCount == 0: zeroCounts += 1
+
                 if i[len(i)-1] == "*":
-                    #We need to check if this * need's to be removed for next level of regex tree (diferentiate these two types of regex)
-                    #Ex: needs to be removed: ((ghi)*) / doesn't need to be removed (abd(acc)*(a)*)
-                    #Going to do this by counting parentheses, if parentheses count equals 0 more than one two times
-                    zeroCounts = 0
-                    auxParenthesesCount = 0
-
-                    for j in range(len(i)):
-                        if i[j] == "(": auxParenthesesCount += 1
-                        if i[j] == ")": auxParenthesesCount += -1
-
-                        if auxParenthesesCount == 0: zeroCounts += 1
-                    
                     if zeroCounts == 2:
                         #In this case we remove the *
                         #and inform in the tree, by means of adding another node with '*' as value
@@ -518,18 +528,18 @@ def buildRegexTree(regex : str, currNode : regexTree):
                         newTree = regexTree([], [])
                         currNode.children.append(newTree)
                 else:
-                    newTree = regexTree([], [])
-                    currNode.value.append(i)
-                    currNode.children.append(newTree)
-
+                    if nextIsUnion:
+                        currNode.children.append(newUnionTree)
+                        
+                        newTree = regexTree([], [])
+                        currNode.value.append(i)
+                        newUnionTree.children.append(newTree)
+                    else:
+                        newTree = regexTree([], [])
+                        currNode.value.append(i)
+                        currNode.children.append(newTree)
 
                 buildRegexTree(i, newTree)
-    
-    #Fix treePrint visualization
-    if len(currNode.children) > 0:
-        if len(currNode.value) > 0:
-            if currNode.children[0].value == '*':
-                currNode.children[0].value = currNode.value[0]
 
 
 def applyStar(a : automaton) -> automaton:
@@ -620,7 +630,7 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
     return path(regexTree.value)
 
 test = "(((a)|(b))(cd))" #Criar função que falta, (concatenação)
-old = "((abd(ac c)*(a)*)|(bb((bc)*aa)*(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
+old = "((abd(ac c)*(a)*)|((bb((bc)*aa)*)(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))|((p)|(z)))"
 
 testTree = regexTree([], [])
 buildRegexTree(old, testTree)
