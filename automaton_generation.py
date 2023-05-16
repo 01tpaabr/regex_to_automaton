@@ -43,6 +43,16 @@ def removeEmpty(automaton) -> automaton:
 
         del(loopFinish.transitions["empty"])
 
+        #[a-z] minimized cases
+        if len(loopStart.transitions) > 1:
+            for t in loopStart.transitions:
+                currTransition = loopStart.transitions[t]
+                newTransition = transition(currTransition.origin, currTransition.symbol, currTransition.target)
+                currTransition.target.transitions[t] = newTransition
+                automaton.transitionsList.append(newTransition)
+            
+            continue
+
         #Find out which word is built in
         loopWord = automaton.findPath(loopStart, loopFinish, loopStart)
         iterationWord = automaton.findFakePath(loopStart, loopFinish) #Path including symbols from other loops

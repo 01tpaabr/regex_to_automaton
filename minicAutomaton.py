@@ -38,6 +38,8 @@ for i in test:
     newRegexTree.value = i
 
     a = automaton_generation.genFinalAutomaton(newRegexTree)
+    a.showVisualDFA("./empty" + str(count) + ".png")
+
     automaton_generation.removeEmpty(a)
     
     a.showVisualDFA("./test" + str(count) + ".png")
