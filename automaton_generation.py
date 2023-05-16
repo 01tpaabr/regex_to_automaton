@@ -331,13 +331,14 @@ def concat(a, b, finalAStates):
     startBState = b.initialState
     a.showVisualDFA("./a.png")
     b.showVisualDFA("./b.png")
-
-
+    
+    mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
+    
     for i in finalAStates:
         print(i)
         i.final = i.final and startBState.final
         #First step is to build, b from each finalStateFromA
-        mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
+        
         mapBToConcat[startBState.name] = i
         #Add first state from A aswell
         mapBToConcat[i.name] = i

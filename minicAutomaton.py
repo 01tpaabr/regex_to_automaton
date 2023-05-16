@@ -14,17 +14,25 @@ simpleTokenList = [
 
 #Others : ['(', ')', 'identifier', 'float', 'number', '\', '\\n', '*']
 
-#identifier: ([a-z]|[A-Z])([a-z]|[A-Z]|[0-9])*
+#identifier: ([a-z]|[A-Z])(([a-z]|[A-Z]|[0-9])*)
 #number: ([0-9][0-9]*)
-#float: ([0-9][0-9]*).([0-9][0-9]*) 
+#float: ([0-9][0-9]*)(.)([0-9][0-9]*) 
 
 otherTokenList = []
 
-number = simplifyRegex.simplify("(([a-Z]|[A-Z])*)")
+number = simplifyRegex.simplify("([0-9][0-9]*)")
 otherTokenList.append(number)
 
+identifier = simplifyRegex.simplify("(([a-z]|[A-Z])(([a-z]|[A-Z]|[0-9])*))")
+otherTokenList.append(identifier)
+
+float = simplifyRegex.simplify("([0-9]([0-9]*))")
+otherTokenList.append(float)
+
+test = [float]
+
 count = 0
-for i in otherTokenList:
+for i in test:
     newRegexTree = regexTree([], [])
     automaton_generation.buildRegexTree(i, newRegexTree)
     newRegexTree.value = i
@@ -33,6 +41,6 @@ for i in otherTokenList:
     automaton_generation.removeEmpty(a)
     print(a)
     
-    # a.showVisualDFA("./test" + str(count) + ".png")
+    a.showVisualDFA("./test" + str(count) + ".png")
     count += 1
 
