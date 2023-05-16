@@ -39,7 +39,6 @@ for i in test:
 
     a = automaton_generation.genFinalAutomaton(newRegexTree)
     automaton_generation.removeEmpty(a)
-    print(a)
     
     a.showVisualDFA("./test" + str(count) + ".png")
     count += 1

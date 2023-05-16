@@ -118,13 +118,29 @@ def removeEmpty(automaton) -> automaton:
                     firstWord[loopFinish] = transitionSymbol
                     automaton.transitionsList.append(newTransition)
 
-
-                
-                
-    
     return automaton
 
-#Aux function to find out which last state this transition needs to be handled in
+def minimizeUnion(union):
+    initState = union.initialState
+
+    for i in union.states:
+        if i != initState:
+            union.states.remove(i)
+    
+    newState = state(True, {})
+
+    for t in union.transitionsList:
+        if t.symbol == "empty":
+            t.origin = newState
+        else:
+            t.target = newState
+
+    
+    union.states.append(newState)
+    
+    return union
+
+#Aux function to find out which last state this transition needs to be handled in (just for union purposes)
 def findLastState(lastStatesList, oldReferenceStateDict, originalState):
     lastStateName = ""
 
@@ -133,6 +149,7 @@ def findLastState(lastStatesList, oldReferenceStateDict, originalState):
     
     for i in lastStatesList:
         if i.name == lastStateName: return i
+
 
 #Given automaton list, unify in one
 def unionProcess(automatons : list) -> automaton:
@@ -297,7 +314,8 @@ def unionProcess(automatons : list) -> automaton:
         pathsList = [val for sublist in pathsList for val in sublist] #Remove nesting
 
         for s in createdStates:
-            union.states.append(s)
+            if s not in union.states:
+                union.states.append(s)
         
         for t in createdTransitions:
             if newTransition not in union.transitionsList: 
@@ -329,13 +347,10 @@ def handleRepeatedTransition(t, aOrigin, bTarget, a, b, automatonMap, calledStat
 
 def concat(a, b, finalAStates):
     startBState = b.initialState
-    a.showVisualDFA("./a.png")
-    b.showVisualDFA("./b.png")
     
     mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
-    
+
     for i in finalAStates:
-        print(i)
         i.final = i.final and startBState.final
         #First step is to build, b from each finalStateFromA
         
@@ -505,13 +520,6 @@ def buildRegexTree(regex : str, currNode : regexTree):
                     i += 1
                     continue
             
-            # #Found next level reg exp
-            # if currentChar == "|" and openParentheses == 0:
-            #     nextLevel.append(currentWord)
-            #     currentWord = ""
-            #     i += 1
-            #     continue
-
             currentWord += currentChar
 
             i += 1
@@ -581,8 +589,8 @@ def buildRegexTree(regex : str, currNode : regexTree):
 
 
 def applyStar(a : automaton) -> automaton:
-    finalStates = a.findLastStates(a.initialState, [])
-    
+    finalStates = a.findLastStates(a.initialState, [])    
+
     #Apply empty transitions from finalStates to initial State
     for i in finalStates:
         if "empty" not in i.transitions.keys():
@@ -594,7 +602,7 @@ def applyStar(a : automaton) -> automaton:
             a.initialState.final = True
         else:
             #We need to add another state before adding empty transition, to keep one transition for which symbol in each state
-            firstPathWord = a.findPath(a.initialState, i)[0]
+            firstPathWord = a.findPath(a.initialState, i, a.initialState)[0]
             newState = state(False, {})
             a.states.append(newState)
 
@@ -656,7 +664,10 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
                 unionList.append(genFinalAutomaton(i))
 
             unionResult = unionProcess(unionList)
-        
+            #For cases like [a-z], [A-Z], [0-9]
+            if unionResult.depth() == 2:
+                unionResult = minimizeUnion(unionResult)
+
             return unionResult
         
         if regexTree.children[0].value[0] == "*":
@@ -693,13 +704,3 @@ old = "(((abd(ac c)*)(ab)*)|((bb((bc)*aa)*)(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))
 # testAutomaton.showVisualDFA("./test.png")
 
 #Problematico em casos de (()*)* ex: (bb((bc)*aa)*ad), (abd(ac c)*(a)*), por conta da ordem dos ()*, no momento esta tratando (ac c)*|(a)* como (ac c)*(a)*
-
-#Scanner mini C
-#tokens: ['<=', 'if', '<', '{', '-', ')', '(', 'identifier', 'for', ',', 'float', '*', 
-# '+', '!=', '>=', '=', 'int', 'number', '}', '>', ';', 'while', 'else', '\\n', '/', '==']
-
-simpleTokenList = [
-    '<=', 'if', '<', '{', '-', 'for', ',', '+', '!=', '>=', '=', 'int', '}', '>', ';', 'while', 'else', '/', '=='
-]
-
-#Others : ['(', ')', 'identifier', 'float', 'number', '\', ]

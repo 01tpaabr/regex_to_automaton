@@ -229,7 +229,8 @@ class automaton():
         
 
         if not hasNextTransition:
-            finalStatesList.append(currState)
+            if currState not in finalStatesList:
+                finalStatesList.append(currState)
         
         return finalStatesList          
 
