@@ -6,12 +6,13 @@ regexTree = definitions.regexTree
 
 #Scanner mini C
 #tokens: ['<=', 'if', '<', '{', '-', ')', '(', 'identifier', 'for', ',', 'float', '*', 
-# '+', '!=', '>=', '=', 'int', 'number', '}', '>', ';', 'while', 'else', '/', '\\n', '==']
+# '+', '!=', '>=', '=', 'int', 'number', '}', '>', ';', 'while', 'else', '/', '==']
 
 tokenAutomatonList = []
+priorityAutomatonList = []
 
 simpleTokenList = [
-    '<=', 'if', '<', '{', '-', 'for', ',', '+', '!=', '>=', '=', 'int', '}', '>', ';', 'while', 'else', '/', '=='
+    '<=', 'if', '<', '{', '-', 'for', ',', '+', '!=', '>=', '=', 'int', '}', '>', ';', 'while', 'else', '/', '==', '\*', '\(', '\)'
 ]
 
 count = 0 
@@ -23,13 +24,16 @@ for i in simpleTokenList:
 
     a = automaton_generation.genFinalAutomaton(newRegexTree)
     automaton_generation.removeEmpty(a)
+    if i != ",":
+        a.showVisualDFA("./token" + str(count) + ".png")
     
     tokenAutomatonList.append(a)
+    priorityAutomatonList.append(a)
 
     count += 1
 
 
-#Others : ['(', ')', 'identifier', 'float', 'number', '\', '\\n', '*']
+#Others : ['(', ')', 'identifier', 'float', 'number', '*']
 
 #identifier: ([a-z]|[A-Z])(([a-z]|[A-Z]|[0-9])*)
 #number: ([0-9][0-9]*)
