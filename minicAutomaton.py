@@ -8,9 +8,26 @@ regexTree = definitions.regexTree
 #tokens: ['<=', 'if', '<', '{', '-', ')', '(', 'identifier', 'for', ',', 'float', '*', 
 # '+', '!=', '>=', '=', 'int', 'number', '}', '>', ';', 'while', 'else', '/', '\\n', '==']
 
+tokenAutomatonList = []
+
 simpleTokenList = [
     '<=', 'if', '<', '{', '-', 'for', ',', '+', '!=', '>=', '=', 'int', '}', '>', ';', 'while', 'else', '/', '=='
 ]
+
+count = 0 
+
+for i in simpleTokenList:
+    newRegexTree = regexTree([], [])
+    automaton_generation.buildRegexTree(i, newRegexTree)
+    newRegexTree.value = i
+
+    a = automaton_generation.genFinalAutomaton(newRegexTree)
+    automaton_generation.removeEmpty(a)
+    
+    tokenAutomatonList.append(a)
+
+    count += 1
+
 
 #Others : ['(', ')', 'identifier', 'float', 'number', '\', '\\n', '*']
 
@@ -29,23 +46,20 @@ otherTokenList.append(identifier)
 float = simplifyRegex.simplify("([0-9]([0-9]*)(.)([0-9]*)( ))")
 otherTokenList.append(float)
 
-basicAutomatonsList = []
 
-count = 0
+
+
 for i in otherTokenList:
     newRegexTree = regexTree([], [])
     automaton_generation.buildRegexTree(i, newRegexTree)
     newRegexTree.value = i
 
     a = automaton_generation.genFinalAutomaton(newRegexTree)
-    a.showVisualDFA("./basic" + str(count) + ".png")
+    automaton_generation.removeEmpty(a)
+    a.showVisualDFA("./token" + str(count) + ".png")
     
-    basicAutomatonsList.append(a)
+    tokenAutomatonList.append(a)
 
     count += 1
 
-lastUnion = automaton_generation.unionProcess(basicAutomatonsList)
-lastUnion.showVisualDFA("./empty.png")
-# automaton_generation.removeEmpty(lastUnion)
-# lastUnion.showVisualDFA("./minic.png")
 

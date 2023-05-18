@@ -678,7 +678,7 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
 
             unionResult = unionProcess(unionList)
             #For cases like [a-z], [A-Z], [0-9]
-            if unionResult.depth() == 2:
+            if unionResult.depth() == 2: #gambiarra
                 unionResult = minimizeUnion(unionResult)
 
             return unionResult
