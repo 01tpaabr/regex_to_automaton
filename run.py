@@ -1,7 +1,11 @@
 import automaton_generation
 
 #If input is valid, will return token list
-def run(tokenAutomatons, priorityList, tokenTypes, input):
+def run(tokenAutomatons, priorityList, tokenTypes, removeLastSymbol, input):
+    #removeLastSymbol é utilizado para remover o ultimo simbolo de tokens que utilizam algum separador para garantir que não haverá erro do tipo 23x ser separado em [number, 23] e [identifier, 'x']
+    #Por exemplo o token de "number" foi definido como ([0-9]([0-9]*)(( )|(;))), é necessário um " " ou ";" para finalizar um número, 
+    # logo é preciso remove-lo quando for adiciona-lo a lista de tokens
+
     notErrors = [" ", "\n"]
 
     #["token", "type", "line"]
@@ -13,6 +17,7 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
     breakCharList = []
     finishedList = []
     lineCountDict = {}
+    acceptedPosition = []
 
     lineCount = 1
 
@@ -36,7 +41,6 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
                 
                 currState = inputPositions[j]
                 if currState:
-                    print(currState)
                     if currChar not in currState.transitions:
                         inputPositions[j] = False
                         finishedList[j] = True
@@ -44,6 +48,7 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
                         if currState.final:
                             
                             accepting_automatons.append(tokenTypes[j])
+                            acceptedPosition.append(i)
                             if currChar ==  "\n": lineCountDict[tokenTypes[j]] = lineCount - 1
                             else: lineCountDict[tokenTypes[j]] = lineCount
                         
@@ -72,9 +77,17 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
                 tokenType = token
             
             actualToken = possibleTokens[tokenTypes.index(tokenType)]
-            if tokenType == "number" or tokenType == "float": #Remover ultimo do número(gambiarra)
+
+            if tokenType in removeLastSymbol: # Meio não ideal
                 actualToken = actualToken[:-1]
-                i += -1
+                lineCount += - 1
+                
+                #Operações para ajustar a posição inicial para próxima iteração
+                if input[i - 1] == input[acceptedPosition[accepting_automatons.index(token)]]:
+                    i += -2
+                else:
+                    i += -1
+                
                 
             tokenList.append([tokenType, actualToken, lineCountDict[tokenType]])
         else:
@@ -90,7 +103,7 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
                     break
 
             if error:
-                print("Token invalido: `" + str(brokenChar) + "` linha:" + str(lineCount))
+                print("Construção de token inválida: `" + str(brokenChar) + "` linha:" + str(lineCount))
                 return False
         
         #Reset automatons and aux structures
@@ -102,5 +115,6 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
                 
         accepting_automatons = []
         lineCountDict = {}
+        acceptedPosition = []
     
     return tokenList

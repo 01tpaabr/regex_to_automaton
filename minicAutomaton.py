@@ -75,14 +75,14 @@ for i in otherTokenList:
 
     count += 1
 
-
-
 inputFile = './ex_minic'
 
 with open(inputFile, 'r') as txt:
     input = txt.read()
 
-result = run.run(tokenAutomatonList, priorityList, tokenType, input)
+result = run.run(tokenAutomatonList, priorityList, tokenType, ["number", "float"], input)
 print(result)
 print()
 print("--- %s seconds ---" % (time.time() - start_time))
+
+#Função de visualização showVisualDFA demora muita tempo para automatos não minimizados
