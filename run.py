@@ -12,6 +12,9 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
     possibleTokens = []
     breakCharList = []
     finishedList = []
+    lineCountDict = {}
+
+    lineCount = 1
 
     for i in tokenAutomatons:
         inputPositions.append(i.initialState)
@@ -21,14 +24,10 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
 
     i = 0
     while i < len(input):
-        
         #When all runs has finished we will have a inputPositions list of the form [False, False, False, ...]
         while False in finishedList:
             currChar = input[i]
-
-            print(possibleTokens)
-            print(currChar)
-            print()
+            if currChar == "\n": lineCount += 1
             
             #One iteration for all automatons
             j = 0
@@ -41,8 +40,10 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
                         finishedList[j] = True
 
                         if currState.final:
+                            
                             accepting_automatons.append(tokenTypes[j])
-                            print(accepting_automatons)
+                            if currChar ==  "\n": lineCountDict[tokenTypes[j]] = lineCount - 1
+                            else: lineCountDict[tokenTypes[j]] = lineCount
                         
                         breakCharList[j] = currChar
                     else:
@@ -51,11 +52,6 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
 
                 j += 1
 
-            print(finishedList)
-            print(accepting_automatons)
-            print(input[i])
-            print()
-
             #Get next char
             if i + 1 <= len(input): i += 1
             else: break
@@ -63,6 +59,8 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
         #In the end of this while Loop, we will have an populated list of accepting_automatons
         #Decide tokenType
         if len(accepting_automatons) > 0:
+            if input[i - 1] not in notErrors:
+                i += - 1 #Go back if last char is not space
             tokenType = ""
             for token in accepting_automatons:
                 if token in priorityList:
@@ -71,14 +69,13 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
 
                 tokenType = token
             
-            tokenList.append([tokenType, possibleTokens[tokenTypes.index(tokenType)]])
+            tokenList.append([tokenType, possibleTokens[tokenTypes.index(tokenType)], lineCountDict[tokenType]])
         else:
             #No automaton accepted this word
             error = False
             #If any automaton has last char different from " " or "\n" then they read something invalid
             brokenChar = ""
 
-            print(breakCharList)
             for char in breakCharList:
                 if char not in notErrors:
                     error = True
@@ -86,10 +83,10 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
                     break
 
             if error:
-                print("Token invalido: `" + str(brokenChar) + "`")
+                print("Token invalido: `" + str(brokenChar) + "` linha:" + str(lineCount))
                 return False
         
-        #Reset automatons
+        #Reset automatons and aux structures
         for a in range(len(tokenAutomatons)):
             inputPositions[a] = tokenAutomatons[a].initialState
             possibleTokens[a] = ""
@@ -97,5 +94,6 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
             finishedList[a] = False
                 
         accepting_automatons = []
+        lineCountDict = {}
     
     return tokenList

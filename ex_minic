@@ -11,7 +11,7 @@ int main ()
   
   while (term>eps)
   {
-    term = term * x * x / n / (n+1);
+    term = term * x * x / n / (n+1 );
     cos = cos + alt * term;
     alt = -alt;
     n = n + 2 ;
