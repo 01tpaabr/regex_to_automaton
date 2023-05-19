@@ -69,7 +69,11 @@ def run(tokenAutomatons, priorityList, tokenTypes, input):
 
                 tokenType = token
             
-            tokenList.append([tokenType, possibleTokens[tokenTypes.index(tokenType)], lineCountDict[tokenType]])
+            actualToken = possibleTokens[tokenTypes.index(tokenType)]
+            if tokenType == "number": #Remover ultimo do número(gambiarra)
+                actualToken = actualToken[:-1]
+                i += -1
+            tokenList.append([tokenType, actualToken, lineCountDict[tokenType]])
         else:
             #No automaton accepted this word
             error = False

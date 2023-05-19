@@ -44,8 +44,9 @@ def removeEmpty(automaton) -> automaton:
         del(loopFinish.transitions["empty"])
 
         #[a-z] minimized cases
-        if len(loopStart.transitions) > 1:
-            ignoreList = ['.', ' '] #gambiarra
+        if len(loopStart.transitions) > 1: #gambiarra
+            ignoreList = ['.', ' ', ";", ")"] 
+            
             for t in loopStart.transitions:
                 if t not in ignoreList:
                     currTransition = loopStart.transitions[t]

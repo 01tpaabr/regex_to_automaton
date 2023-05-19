@@ -45,7 +45,7 @@ for i in simpleTokenList:
 
 otherTokenList = []
 
-number = simplifyRegex.simplify("([0-9]([0-9]*)( ))")
+number = simplifyRegex.simplify("([0-9]([0-9]*)(( )|(;)))")
 otherTokenList.append(number)
 tokenType.append("number")
 
@@ -53,7 +53,7 @@ identifier = simplifyRegex.simplify("(([a-z]|[A-Z])(([a-z]|[A-Z]|[0-9])*))")
 otherTokenList.append(identifier)
 tokenType.append("identifier")
 
-float = simplifyRegex.simplify("([0-9]([0-9]*)(.)([0-9]*)( ))")
+float = simplifyRegex.simplify("([0-9]([0-9]*)(.)([0-9]*)(( )|(;)))")
 otherTokenList.append(float)
 tokenType.append("float")
 
@@ -64,6 +64,7 @@ for i in otherTokenList:
     newRegexTree.value = i
 
     a = automaton_generation.genFinalAutomaton(newRegexTree)
+    a.showVisualDFA("./automaton_images/empty" + str(count) + ".png")
     automaton_generation.removeEmpty(a)
     a.showVisualDFA("./automaton_images/token" + str(count) + ".png")
     
@@ -80,5 +81,7 @@ with open(inputFile, 'r') as txt:
 
 result = run.run(tokenAutomatonList, priorityList, tokenType, input)
 print(result)
+
+
 
 
