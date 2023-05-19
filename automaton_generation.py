@@ -327,17 +327,17 @@ def handleRepeatedTransition(t, aOrigin, bTarget, a, b, automatonMap, calledStat
                     handleRepeatedTransition(currTransition, aOrigin, bTarget, a, b, automatonMap, calledStates)
 
 
-def concat(a, b, finalAStates):
+def concat(a, b):
     startBState = b.initialState
-    a.showVisualDFA("./a.png")
-    b.showVisualDFA("./b.png")
+    
+    mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
 
+    finalAStates = a.finalStates()
 
     for i in finalAStates:
-        print(i)
         i.final = i.final and startBState.final
         #First step is to build, b from each finalStateFromA
-        mapBToConcat = {} #Keep track of which state from B new states in concat automaton refers to
+        
         mapBToConcat[startBState.name] = i
         #Add first state from A aswell
         mapBToConcat[i.name] = i
@@ -366,7 +366,6 @@ def concat(a, b, finalAStates):
             newOrigin = mapBToConcat[oldOrigin.name]
             newTarget = mapBToConcat[oldTarget.name]
             
-            
             if currSymbol in newOrigin.transitions: #Handle later
                 repeatedTransitions.append(oldTransition)
             else:
@@ -381,7 +380,9 @@ def concat(a, b, finalAStates):
         for i in repeatedTransitions:
             handleRepeatedTransition(i, mapBToConcat[i.origin.name], i.target, a, b, mapBToConcat, [])
 
+    
     return a
+
 
             
 #No 'or' operator in this regex
@@ -411,37 +412,44 @@ def path(regex : str) -> automaton:
     
     i = 0
     while i < len(regex):
+        notOperator = False
         realSymbol = regex[i]
-        # separatePath = False
         
-        if realSymbol == "(":
-            openGroup += 1
-            openParentheses += 1
+        if realSymbol == "\\": #Ignore next character as operator
+            notOperator = True
+            i += 1
+            realSymbol = regex[i]
 
-        #Handle Group Closure
-        if realSymbol == ")":
-            openParentheses += -1
-            startGroupState = groupStateStack.pop()
-            #Not last
-            if i < len(regex) - 1:
-                if regex[i + 1] == "*":
-                    #Add transition to go back to starting group state
-                    backTransition = transition(startGroupState, "empty", lastState)
-                    a.transitionsList.append(backTransition)
-                    lastState.transitions["empty"] = backTransition
+        
+        if not notOperator:
+            if realSymbol == "(":
+                openGroup += 1
+                openParentheses += 1
 
-                    #Reset last state
-                    lastState = startGroupState
+            #Handle Group Closure
+            if realSymbol == ")":
+                openParentheses += -1
+                startGroupState = groupStateStack.pop()
+                #Not last
+                if i < len(regex) - 1:
+                    if regex[i + 1] == "*":
+                        #Add transition to go back to starting group state
+                        backTransition = transition(startGroupState, "empty", lastState)
+                        a.transitionsList.append(backTransition)
+                        lastState.transitions["empty"] = backTransition
 
-                    if i + 1 == len(regex) - 1:
-                        lastState.final = True
-                
-                #Exists other symbols
-                if i < len(regex) - 2:
-                    # +1 for '*', that we have already handled
-                    i += 1
+                        #Reset last state
+                        lastState = startGroupState
 
-        if realSymbol not in operators:
+                        if i + 1 == len(regex) - 1:
+                            lastState.final = True
+                    
+                    #Exists other symbols
+                    if i < len(regex) - 2:
+                        # +1 for '*', that we have already handled
+                        i += 1
+
+        if realSymbol not in operators or notOperator:
             #If there is no more characters left, this is an final state
             newState = state(not (i + 1 < len(regex)), {})
 
@@ -486,31 +494,34 @@ def buildRegexTree(regex : str, currNode : regexTree):
 
         while i < len(regex):
             currentChar = regex[i]
+            notOperator = False
 
-            if currentChar == "(": openParentheses += 1
+            if currentChar == "\\":
+                notOperator = True
+                currentWord += currentChar #Add \
 
-            if currentChar == ")": 
-                openParentheses += -1
-                if openParentheses == 0:
-                    currentWord += ")"
-
-                    if i + 1 < len(regex):
-                        if regex[i + 1] == "*":
-                            currentWord += '*'
-                            i += 1
-
-                    nextLevel.append(currentWord)
-                    currentWord = ""
+                if i + 1 < len(regex):
                     i += 1
-                    continue
-            
-            # #Found next level reg exp
-            # if currentChar == "|" and openParentheses == 0:
-            #     nextLevel.append(currentWord)
-            #     currentWord = ""
-            #     i += 1
-            #     continue
+                    currentChar = regex[i] #Add next char
 
+            if not notOperator:
+                if currentChar == "(": openParentheses += 1
+
+                if currentChar == ")": 
+                    openParentheses += -1
+                    if openParentheses == 0:
+                        currentWord += ")"
+
+                        if i + 1 < len(regex):
+                            if regex[i + 1] == "*":
+                                currentWord += '*'
+                                i += 1
+
+                        nextLevel.append(currentWord)
+                        currentWord = ""
+                        i += 1
+                        continue
+            
             currentWord += currentChar
 
             i += 1
@@ -539,17 +550,28 @@ def buildRegexTree(regex : str, currNode : regexTree):
             if len(i) != 0: 
                 #We need to check if this * need's to be removed for next level of regex tree (diferentiate these two types of regex)
                 #Ex: needs to be removed: ((ghi)*) / doesn't need to be removed (abd(acc)*(a)*)
-                #Going to do this by counting parentheses, if parentheses count equals 0 more than one two times
+                #Going to do this by counting parentheses, if parentheses count equals 0 more than one any two times
                 zeroCounts = 0
                 auxParenthesesCount = 0
+                
+                j = 0
+                while j < len(i):
+                    notOperator = False
 
-                for j in range(len(i)):
-                    if i[j] == "(": auxParenthesesCount += 1
-                    if i[j] == ")": auxParenthesesCount += -1
+                    if i[j] == "\\": #Ignore \(
+                        notOperator = True
+                        if j + 1 < len(i):
+                            j += 1
 
-                    if auxParenthesesCount == 0: zeroCounts += 1
+                    if not notOperator:
+                        if i[j] == "(": auxParenthesesCount += 1
+                        if i[j] == ")": auxParenthesesCount += -1
 
-                if i[len(i)-1] == "*":
+                        if auxParenthesesCount == 0: zeroCounts += 1
+
+                    j += 1
+
+                if i[len(i)-1] == "*" and i[len(i) - 2] == ")": 
                     if zeroCounts == 2:
                         #In this case we remove the *
                         #and inform in the tree, by means of adding another node with '*' as value
@@ -641,7 +663,7 @@ def genFinalAutomaton(regexTree : regexTree) -> automaton:
         
         i = 1
         while i < len(concatList):
-            concatResult = concat(concatResult, concatList[i], concatList[i-1].finalStates())
+            concatResult = concat(concatResult, concatList[i])
             i += 1
 
         return concatResult
@@ -692,13 +714,3 @@ old = "(((abd(ac c)*)(ab)*)|((bb((bc)*aa)*)(ad))|(ba)|((x)|(((ghi)|(kkkkkkk))*))
 # testAutomaton.showVisualDFA("./test.png")
 
 #Problematico em casos de (()*)* ex: (bb((bc)*aa)*ad), (abd(ac c)*(a)*), por conta da ordem dos ()*, no momento esta tratando (ac c)*|(a)* como (ac c)*(a)*
-
-#Scanner mini C
-#tokens: ['<=', 'if', '<', '{', '-', ')', '(', 'identifier', 'for', ',', 'float', '*', 
-# '+', '!=', '>=', '=', 'int', 'number', '}', '>', ';', 'while', 'else', '\\n', '/', '==']
-
-simpleTokenList = [
-    '<=', 'if', '<', '{', '-', 'for', ',', '+', '!=', '>=', '=', 'int', '}', '>', ';', 'while', 'else', '/', '=='
-]
-
-#Others : ['(', ')', 'identifier', 'float', 'number', '\', ]
